@@ -18,7 +18,7 @@ target_sources(
 
   # impl/external_wrapper/gem5_frontend.cpp
 
-  impl/memory_trace/AiM_trace.cpp
+  impl/external_wrapper/AiM_wrapper.cpp
 )
 
 target_link_libraries(

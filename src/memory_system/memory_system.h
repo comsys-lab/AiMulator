@@ -41,17 +41,33 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
       m_impl->print_stats(emitter);
       emitter << YAML::EndMap;
       std::cout << emitter.c_str() << std::endl;
+    };
 
-      std::string file_path = "/home/work/pim/aimulator/log/aimulator_stat_memory_system.yaml";
+    virtual void finalize_wrapper(const char* stats_dir, const char* timestamp) {
+      std::string file_path(stats_dir);
+      file_path.append("/aimulator_");
+      file_path.append(timestamp);
+      file_path.append("system.yaml");
+
+      for (auto component: m_components) {
+        component->finalize();
+      }
+
+      YAML::Emitter emitter;
+      emitter << YAML::BeginMap;
+      m_impl->print_stats(emitter);
+      emitter << YAML::EndMap;
+      std::cout << emitter.c_str() << std::endl;
+
       std::ofstream output_file(file_path);
       if (output_file.is_open()) {
         output_file << emitter.c_str() << std::endl;
         output_file.close();
         std::cout << "[Ramulator] Statistics saved to: " << file_path << std::endl;
       } else {
-        std::cerr << "[Ramulator] Error: Could not open file " << file_path << std::endl;
+        std::cerr << "[Ramulator] Error: Unable to open file for writing: " << file_path << std::endl;
       }
-    };
+    }
 
     /**
      * @brief         Tries to send the request to the memory system

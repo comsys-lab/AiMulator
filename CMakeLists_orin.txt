@@ -14,12 +14,11 @@ message("Configuring ${CMAKE_PROJECT_NAME} ${CMAKE_PROJECT_Version}...")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Debug-specific flags
-# Updated: Added -fno-inline and -fno-omit-frame-pointer to help GDB unwinding
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -ggdb -fno-inline -fno-omit-frame-pointer -DRAMULATOR_DEBUG")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -ggdb -DRAMULATOR_DEBUG")
   message(STATUS "Debug flags: ${CMAKE_CXX_FLAGS_DEBUG}")
 else()
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -g")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
   message(STATUS "Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 endif()
 
@@ -88,9 +87,10 @@ set_target_properties(ramulator PROPERTIES
 
 # Set compile options based on build type
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # Note: Flags are already set in CMAKE_CXX_FLAGS_DEBUG above,
-  # but ensuring definitions here is good practice.
+  target_compile_options(ramulator PRIVATE -O0 -g3 -ggdb)
   target_compile_definitions(ramulator PRIVATE RAMULATOR_DEBUG)
+else()
+  target_compile_options(ramulator PRIVATE -O2)
 endif()
 
 target_link_libraries(
@@ -106,6 +106,13 @@ target_link_libraries(
   PRIVATE ramulator
   PRIVATE argparse
 )
+
+# Set compile options for executable
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  target_compile_options(ramulator-exe PRIVATE -O0 -g3 -ggdb)
+else()
+  target_compile_options(ramulator-exe PRIVATE -O2)
+endif()
 
 set_target_properties(
   ramulator-exe

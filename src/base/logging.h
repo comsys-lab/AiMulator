@@ -36,6 +36,9 @@ class Logging {
      */
     static Logger_t get(std::string name);
 
+    static void destroy_logger(std::string name);
+    static void destroy_all_loggers();
+
   private:
     static bool _create_base_logger();
     inline static bool base_logger_registered = _create_base_logger();

@@ -21,6 +21,7 @@ class IAddrMapper {
     virtual void apply(Request& req) = 0;
 
     virtual std::vector<Addr_t> convert_pkt_addr(const Trace& trace) = 0;
+    virtual IDRAM* get_m_dram() = 0;
 };
 
 }       // namespace Ramulator

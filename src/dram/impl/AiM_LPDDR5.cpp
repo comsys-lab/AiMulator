@@ -46,7 +46,7 @@ class LPDDR5 : public IDRAM, public Implementation {
       // WCK2CK Sync
       "CASRD",  "CASWR",
       "RD16",   "WR16",   "RD16A",   "WR16A",
-      "REFab",  "REFpb",
+      "REFab",  "REFpb",  "REFab_end",
       "RFMab",  "RFMpb",
       // Single-bank AiM commands leverage the conventional RD, WR, etc.
       "MACSB", "AFSB", "RDCP", "WRCP",
@@ -57,13 +57,10 @@ class LPDDR5 : public IDRAM, public Implementation {
       // "ACT4_BKS-1", "ACTAF4_BKS-1", "ACT4_BKS-1", "ACTAF4_BKS-1", "PRE4_BKS",
       // "CASRD4B_INTER", "CASWR4B_INTER",
       // "MAC4B_INTER", "AF4B_INTER",
-      "ACT16-1", "ACT16-2", 
+      "ACT16-1", "ACT16-2",
       "MACAB", "AFAB", "WRAFLUT", "WRBK",
       // No-bank AiM commands
       "WRGB", "WRMAC", "WRBIAS", "RDMAC", "RDAF",
-      // Deprecated
-      // "ACTAF4_BG-1", "ACTAF4_BG-2", "CASRD4B_INTRA", "CASWR4B_INTRA",
-      // "ACTAF16-1", "ACTAF16-2", "CASRDAB", "CASWRAB",
     };
 
     inline static const ImplLUT m_command_addressing_level = LUT (
@@ -72,7 +69,7 @@ class LPDDR5 : public IDRAM, public Implementation {
         {"PRE",   "bank"},   {"PREA",   "rank"},
         {"CASRD", "rank"},   {"CASWR",  "rank"},
         {"RD16",  "column"}, {"WR16",   "column"}, {"RD16A", "column"}, {"WR16A", "column"},
-        {"REFab", "rank"},   {"REFpb",  "rank"},
+        {"REFab", "rank"},   {"REFpb",  "rank"},   {"REFab_end", "rank"},
         {"RFMab", "rank"},   {"RFMpb",  "rank"},
         // Single-bank AiM commands
         {"MACSB", "column"}, {"AFSB", "column"}, {"RDCP", "column"}, {"WRCP", "column"},
@@ -88,9 +85,6 @@ class LPDDR5 : public IDRAM, public Implementation {
         // No-bank AiM commands
         {"WRGB", "channel"}, {"WRMAC", "bank"}, {"WRBIAS", "bank"},
         {"RDMAC", "bank"}, {"RDAF", "bank"},
-        // Deprecated
-        // {"ACTAF4_BG-1", "row"}, {"ACTAF4_BG-2", "row"}, {"CASRD4B_INTRA", "rank"}, {"CASWR4B_INTRA",  "rank"},
-        // {"ACTAF16-1", "row"}, {"ACTAF16-2", "row"}, {"CASRDAB", "rank"}, {"CASWRAB",  "rank"},
       }
     );
 
@@ -100,7 +94,7 @@ class LPDDR5 : public IDRAM, public Implementation {
         {"PRE",   "bank"},   {"PREA",   "rank"},
         {"CASRD", "rank"},   {"CASWR",  "rank"},
         {"RD16",  "column"}, {"WR16",   "column"}, {"RD16A", "column"}, {"WR16A", "column"},
-        {"REFab", "rank"},   {"REFpb",  "rank"},
+        {"REFab", "rank"},   {"REFpb",  "rank"},   {"REFab_end", "rank"},
         {"RFMab", "rank"},   {"RFMpb",  "rank"},
         // Single-bank AiM commands
         {"MACSB", "column"}, {"AFSB", "column"}, {"RDCP", "column"}, {"WRCP", "column"},
@@ -109,17 +103,14 @@ class LPDDR5 : public IDRAM, public Implementation {
         {"MAC4B_INTRA", "bankgroup"}, {"AF4B_INTRA", "bankgroup"}, {"EWMUL", "bankgroup"}, {"EWADD", "bankgroup"},
         // TODO: 4-bank commands for inter-bank group
         // {"ACT4_BKS-1", "bank"}, {"ACTAF4_BKS-1", "bank"}, {"ACT4_BKS-2", "bank"}, {"ACTAF4_BKS-2", "bank"}, {"PRE4_BKS", "bank"},
-        // {"CASRD4B_INTER", "rank"}, {"CASWR4B_INTER",  "rank"}, {"EWMUL", "bank"}, {"EWADD", "bank"},
-        // {"MAC4B_INTER", "bank"}, {"AF4B_INTER", "bank"},
+        // {"CASRD4B_INTER", "rank"}, {"CASWR4B_INTER",  "rank"},
+        // {"MAC4B_INTER", "bank"}, {"AF4B_INTER", "bank"}, {"EWMUL", "bank"}, {"EWADD", "bank"},
         // all-bank commands
-        {"ACT16-1", "rank"}, {"ACT16-2", "rank"}, 
+        {"ACT16-1", "rank"}, {"ACT16-2", "rank"},
         {"MACAB", "rank"}, {"AFAB", "rank"}, {"WRAFLUT", "rank"}, {"WRBK", "rank"},
         // No-bank AiM commands
-        {"WRGB", "channel"}, {"WRMAC", "channel"}, {"WRBIAS", "channel"},
-        {"RDMAC", "channel"}, {"RDAF", "channel"},
-        // Deprecated
-        // {"ACTAF4_BG-1", "bankgroup"}, {"ACTAF4_BG-2", "bankgroup"}, {"CASRD4B_INTRA", "rank"}, {"CASWR4B_INTRA",  "rank"},
-        // {"ACTAF16-1", "rank"}, {"ACTAF16-2", "rank"}, {"CASRDAB", "rank"}, {"CASWRAB",  "rank"},
+        {"WRGB", "rank"}, {"WRMAC", "rank"}, {"WRBIAS", "rank"},
+        {"RDMAC", "rank"}, {"RDAF", "rank"},
       }
     );
 
@@ -137,6 +128,7 @@ class LPDDR5 : public IDRAM, public Implementation {
         {"RD16A", {false,  true,    true,    false}},
         {"WR16A", {false,  true,    true,    false}},
         {"REFab", {false,  false,   false,   true }},
+        {"REFab_end", {false,  true,    false,   false}},
         {"REFpb", {false,  false,   false,   true }},
         {"RFMab", {false,  false,   false,   true }},
         {"RFMpb", {false,  false,   false,   true }},
@@ -171,15 +163,6 @@ class LPDDR5 : public IDRAM, public Implementation {
         {"WRBIAS",  {false,  false,   false,   false}},
         {"RDMAC",   {false,  false,   false,   false}},
         {"RDAF",    {false,  false,   false,   false}},
-        // Deprecated
-        // {"ACTAF4_BG-1",   {false,   false,   false,   false}},
-        // {"ACTAF4_BG-2",   {true,   false,   false,   false}},
-        // {"CASRD4B_INTRA", {false,  false,   false,   false}},
-        // {"CASWR4B_INTRA", {false,  false,   false,   false}},
-        // {"ACTAF16-1", {false,   false,   false,   false}},
-        // {"ACTAF16-2", {true,   false,   false,   false}},
-        // {"CASRDAB", {false,  false,   false,   false}},
-        // {"CASWRAB", {false,  false,   false,   false}},
       }
     );
 
@@ -202,9 +185,8 @@ class LPDDR5 : public IDRAM, public Implementation {
       "MAC_SBK", "AF_SBK", "COPY_BKGB", "COPY_GBBK",
       // Multi-bank AiM commands
       "MAC_4BK_INTRA_BG", "AF_4BK_INTRA_BG", "EWMUL", "EWADD",
-      // AiM 4 bank
+      // TODO: 4-bank commands for inter-bank group
       // "MAC_4BK_INTER_BG", "AF_4BK_INTER_BG",
-      // All-bank AiM commands
       "MAC_ABK", "AF_ABK", "WR_AFLUT", "WR_BK",
       // AiM DMA commands
       "WR_GB", "WR_MAC", "WR_BIAS", "RD_MAC", "RD_AF",
@@ -215,10 +197,9 @@ class LPDDR5 : public IDRAM, public Implementation {
         // Single-bank AiM commands
         {"MAC_SBK", "MACSB"}, {"AF_SBK", "AFSB"}, {"COPY_BKGB", "RDCP"}, {"COPY_GBBK", "WRCP"},
         // Multi-bank AiM commands
-        {"MAC_4BK_INTRA_BG", "MAC4B_INTRA"}, {"AF_4BK_INTRA_BG", "AF4B_INTRA"}, {"EWMUL", "EWMUL"}, {"EWADD", "EWADD"},
-        // AiM 4 bank
-        // {"MAC_4BK_INTER_BG", "MAC4B_INTER"}, {"AF_4BK_INTER_BG", "AF4B_INTER"},
-        // All-bank AiM commands
+        {"MAC_4BK_INTRA_BG", "MAC4B_INTRA"}, {"AF_4BK_INTRA_BG", "AF4B_INTRA"}, {"EWMUL", "EWMUL"}, {"EWADD", "EWADD"}, 
+        // TODO: 4-bank commands for inter-bank group
+        // {"MAC_4BK_INTER_BG", "MAC4B_INTER"}, {"AF_4BK_INTER_BG", "AF4B_INTER"}, 
         {"MAC_ABK", "MACAB"}, {"AF_ABK", "AFAB"}, {"WR_AFLUT", "WRAFLUT"}, {"WR_BK", "WRBK"},
         // AiM DMA commands
         {"WR_GB", "WRGB"}, {"WR_MAC", "WRMAC"}, {"WR_BIAS", "WRBIAS"}, {"RD_MAC", "RDMAC"}, {"RD_AF", "RDAF"},
@@ -278,7 +259,57 @@ class LPDDR5 : public IDRAM, public Implementation {
     FuncMatrix<RowopenFunc_t<Node>> m_rowopens;
 
   public:
-    void tick() override { m_clk++; };
+    void tick() override {
+      m_clk++;
+
+      if (m_future_actions.size() > 0) {
+        std::cerr << "[AiM_LPDDR5::tick] Current cycle: " << m_clk
+                  << ", Future actions pending: " << m_future_actions.size() << std::endl;
+      }
+
+      // Process future actions (e.g., REFab_end after nRFCab cycles)
+      for (int i = m_future_actions.size() - 1; i >= 0; i--) {
+        auto& future_action = m_future_actions[i];
+        if (future_action.clk == m_clk) {
+          int channel_id = future_action.addr_h[m_levels["channel"]];
+          int rank_id = future_action.addr_h[m_levels["rank"]];
+          // std::cerr << "[AiM_LPDDR5::tick] EXECUTING future action: cmd=" << m_commands(future_action.cmd)
+          //           << " channel=" << channel_id
+          //           << " rank=" << rank_id
+          //           << " cycle=" << m_clk << std::endl;
+
+          // Log bank states before REFab_end
+          if (future_action.cmd == m_commands["REFab_end"]) {
+            auto* rank = m_channels[channel_id]->m_child_nodes[rank_id];
+            std::cerr << "[AiM_LPDDR5::tick] REFab_end - Bank states BEFORE:" << std::endl;
+            for (auto* bg : rank->m_child_nodes) {
+              for (auto* bank : bg->m_child_nodes) {
+                std::cerr << "  BG[" << bg->m_node_id << "] Bank[" << bank->m_node_id << "] = "
+                         << m_states(bank->m_state) << std::endl;
+              }
+            }
+          }
+
+          m_channels[channel_id]->update_states(future_action.cmd, future_action.addr_h, m_clk);
+
+          // Log bank states after REFab_end
+          if (future_action.cmd == m_commands["REFab_end"]) {
+            auto* rank = m_channels[channel_id]->m_child_nodes[rank_id];
+            std::cerr << "[AiM_LPDDR5::tick] REFab_end - Bank states AFTER:" << std::endl;
+            for (auto* bg : rank->m_child_nodes) {
+              for (auto* bank : bg->m_child_nodes) {
+                std::cerr << "  BG[" << bg->m_node_id << "] Bank[" << bank->m_node_id << "] = "
+                         << m_states(bank->m_state) << std::endl;
+              }
+            }
+          }
+
+          m_future_actions.erase(m_future_actions.begin() + i);
+          std::cerr << "[AiM_LPDDR5::tick] Future action executed and removed. Remaining: "
+                    << m_future_actions.size() << std::endl;
+        }
+      }
+    };
 
     void init() override {
       RAMULATOR_DECLARE_SPECS();
@@ -329,6 +360,19 @@ class LPDDR5 : public IDRAM, public Implementation {
       }
       case m_commands["ACT-2"]: {
         m_open_rows[channel_id] |= (uint16_t)(1 << bank_id);
+        break;
+      }
+      case m_commands["REFab"]: {
+        // Schedule REFab_end to execute after nRFCab cycles
+        Clk_t refab_end_cycle = m_clk + m_timing_vals("nRFCab") - 1;
+        std::cerr << "[AiM_LPDDR5::issue_command] REFab issued at cycle " << m_clk
+                  << ". Scheduling REFab_end for cycle " << refab_end_cycle
+                  << " (nRFCab=" << m_timing_vals("nRFCab") << ")"
+                  << " channel=" << addr_h[m_levels["channel"]]
+                  << " rank=" << addr_h[m_levels["rank"]] << std::endl;
+        m_future_actions.push_back({m_commands["REFab_end"], addr_h, m_clk + m_timing_vals("nRFCab") - 1});
+        std::cerr << "[AiM_LPDDR5::issue_command] Future actions count after REFab: "
+                  << m_future_actions.size() << std::endl;
         break;
       }
       default:
@@ -399,10 +443,10 @@ class LPDDR5 : public IDRAM, public Implementation {
       _density >>= 20;
       if (m_organization.density != _density) {
         throw ConfigurationError(
-            "Calculated {} chip density {} Mb does not equal the provided density {} Mb!", 
-            get_name(),
-            _density, 
-            m_organization.density
+          "Calculated {} chip density {} Mb does not equal the provided density {} Mb!", 
+          get_name(),
+          _density, 
+          m_organization.density
         );
       }
     };
@@ -450,24 +494,25 @@ class LPDDR5 : public IDRAM, public Implementation {
 
       // Refresh timings
       // tRFC table (unit is nanosecond!)
-      constexpr int tRFCab_TABLE[4] = {
-      //  2Gb   4Gb   8Gb  16Gb
-          130,  180,  210,  280, 
+      // AiM (32Gb) defines arbitrary values.
+      constexpr int tRFCab_TABLE[5] = {
+      //  2Gb   4Gb   8Gb  16Gb  32Gb
+          130,  180,  210,  280,  330
       };
 
-      constexpr int tRFCpb_TABLE[4] = {
-      //  2Gb   4Gb   8Gb  16Gb
-          60,   90,   120,  140, 
+      constexpr int tRFCpb_TABLE[5] = {
+      //  2Gb   4Gb   8Gb  16Gb  32Gb
+          60,   90,   120,  140,  160
       };
 
-      constexpr int tPBR2PBR_TABLE[4] = {
-      //  2Gb   4Gb   8Gb  16Gb
-          60,   90,   90,  90, 
+      constexpr int tPBR2PBR_TABLE[5] = {
+      //  2Gb   4Gb   8Gb  16Gb  32Gb
+          60,   90,   90,  90,    90
       };
 
-      constexpr int tPBR2ACT_TABLE[4] = {
-      //  2Gb   4Gb   8Gb  16Gb
-          8,    8,    8,   8, 
+      constexpr int tPBR2ACT_TABLE[5] = {
+      //  2Gb   4Gb   8Gb  16Gb  32Gb
+          8,    8,    8,   8,    8
       };
 
       // tREFI(base) table (unit is nanosecond!)
@@ -478,6 +523,7 @@ class LPDDR5 : public IDRAM, public Implementation {
           case 4096:  return 1;
           case 8192:  return 2;
           case 16384: return 3;
+          case 32768: return 4;
           default:    return -1;
         }
       }(m_organization.density);
@@ -515,22 +561,22 @@ class LPDDR5 : public IDRAM, public Implementation {
       m_command_latencies("RD16") = m_timing_vals("nCL") + m_timing_vals("nBL16");
       m_command_latencies("WR16") = m_timing_vals("nCWL") + m_timing_vals("nBL16");
       // AiM commands
-      m_command_latencies("MACSB")  = 1;
-      m_command_latencies("AFSB")   = 1;
-      m_command_latencies("RDCP")   = 1;
-      m_command_latencies("WRCP")   = 1;
+      m_command_latencies("MACSB") = 1;
+      m_command_latencies("AFSB")  = 1;
+      m_command_latencies("RDCP")  = 1;
+      m_command_latencies("WRCP")  = 1;
       m_command_latencies("MAC4B_INTRA") = 1;
       m_command_latencies("AF4B_INTRA")  = 1;
-      m_command_latencies("MACAB")  = 1;
-      m_command_latencies("AFAB")   = 1;
-      m_command_latencies("EWMUL")  = 1;
-      m_command_latencies("EWADD")  = 1;
-      m_command_latencies("WRBK")   = 1;
-      m_command_latencies("WRGB")   = m_timing_vals("nCWLGB")  + m_timing_vals("nBL16");
-      m_command_latencies("WRMAC")  = m_timing_vals("nCWLREG") + m_timing_vals("nBL16");
+      m_command_latencies("MACAB") = 1;
+      m_command_latencies("AFAB")  = 1;
+      m_command_latencies("EWMUL") = 1;
+      m_command_latencies("EWADD") = 1;
+      m_command_latencies("WRBK")  = 1;
+      m_command_latencies("WRGB")  = m_timing_vals("nCWLGB")  + m_timing_vals("nBL16");
+      m_command_latencies("WRMAC") = m_timing_vals("nCWLREG") + m_timing_vals("nBL16");
       m_command_latencies("WRBIAS") = m_timing_vals("nCWLREG") + m_timing_vals("nBL16");
-      m_command_latencies("RDMAC")  = m_timing_vals("nCLREG")  + m_timing_vals("nBL16");
-      m_command_latencies("RDAF")   = m_timing_vals("nCLREG")  + m_timing_vals("nBL16");
+      m_command_latencies("RDMAC") = m_timing_vals("nCLREG")  + m_timing_vals("nBL16");
+      m_command_latencies("RDAF")  = m_timing_vals("nCLREG")  + m_timing_vals("nBL16");
       // AiM timings
       m_timing_vals("nCLREG")  = 0;
       m_timing_vals("nCLGB")   = 1;
@@ -566,25 +612,12 @@ class LPDDR5 : public IDRAM, public Implementation {
         {.level = "rank", .preceding = {"PREA"},  .following = {"ACT-1", "ACT4_BG-1", "ACT16-1"}, .latency = V("nRPab")},
         {.level = "rank", .preceding = {"PRE4_BG"}, .following = {"ACT16-1"}, .latency = V("nRPab")},
         {.level = "rank", .preceding = {"PRE"}, .following = {"ACT16-1"}, .latency = V("nRPpb")},
-        // Deprecated
-        // ACT <-> ACT
-        // {.level = "rank", .preceding = {"ACTAF16-1"}, .following = {"ACTAF16-1"}, .latency = V("nRRD")},
-        // {.level = "rank", .preceding = {"ACTAF4_BG-1"}, .following = {"ACTAF4_BG-1"}, .latency = V("nRRD")},
-        // {.level = "rank", .preceding = {"ACT4_BG-1", "ACTAF4_BG-1"}, .following = {"ACT-1"}, .latency = V("nRRD")},
-        // {.level = "rank", .preceding = {"ACT-1"}, .following = {"ACT-1", "ACT4_BG-1", "ACTAF4_BG-1"}, .latency = V("nRRD")},
-        // ACT <-> PRE
-        // {.level = "rank", .preceding = {"ACT-1", "ACT4_BG-1", "ACTAF4_BG-1", "ACT16-1", "ACTAF16-1"}, .following = {"PREA"}, .latency = V("nRAS")},
-        // {.level = "rank", .preceding = {"PREA"},  .following = {"ACT-1", "ACT4_BG-1", "ACTAF4_BG-1", "ACT16-1", "ACTAF16-1"}, .latency = V("nRPab")},
-        // {.level = "rank", .preceding = {"PRE4_BG"}, .following = {"ACT16-1", "ACTAF16-1"}, .latency = V("nRPab")},
-        // {.level = "rank", .preceding = {"PRE"}, .following = {"ACT16-1", "ACTAF16-1"}, .latency = V("nRPpb")},
         /************************************************************
          * CAS <-> RAS
          *************************************************************/
         {.level = "rank", .preceding = {"ACT-1", "ACT4_BG-1", "ACT16-1"}, .following = {"MACAB", "AFAB", "WRAFLUT", "WRBK"}, .latency = V("nRCD")},
         {.level = "rank", .preceding = {"RD16", "RD16A", "MAC4B_INTRA", "AF4B_INTRA", "EWMUL", "EWADD", "MACAB", "AFAB"}, .following = {"PREA"}, .latency = V("nRTP")},
         {.level = "rank", .preceding = {"WR16", "WR16A", "WRAFLUT", "WRBK"}, .following = {"PREA"}, .latency = V("nCWL")+V("nBL16")+V("nWR")},
-        // Deprecated
-        // {.level = "rank", .preceding = {"ACT-1", "ACT4_BG-1", "ACTAF4_BG-1", "ACT16-1", "ACTAF16-1"}, .following = {"MACAB", "AFAB", "WRAFLUT", "WRBK"}, .latency = V("nRCD")},
         /************************************************************
          * CAS <-> CAS
          *************************************************************/
@@ -608,12 +641,12 @@ class LPDDR5 : public IDRAM, public Implementation {
          * REF
          *************************************************************/
         /// RAS <-> REF
-        {.level = "rank", .preceding = {"ACT-1"}, .following = {"REFab"}, .latency = V("nRC")},
-        {.level = "rank", .preceding = {"PRE"},   .following = {"REFab"}, .latency = V("nRPpb")},
+        {.level = "rank", .preceding = {"ACT-1", "ACT4_BG-1", "ACT4_BG-2", "ACT16-1", "ACT16-2"}, .following = {"REFab"}, .latency = V("nRC")},
+        {.level = "rank", .preceding = {"PRE", "PRE4_BG"},   .following = {"REFab"}, .latency = V("nRPpb")},
         {.level = "rank", .preceding = {"PREA"},  .following = {"REFab"}, .latency = V("nRPab")},
         {.level = "rank", .preceding = {"RD16A"}, .following = {"REFab"}, .latency = V("nRPpb")+V("nRTP")},
         {.level = "rank", .preceding = {"WR16A"}, .following = {"REFab"}, .latency = V("nCWL")+V("nBL16")+V("nWR")+V("nRPpb")},
-        {.level = "rank", .preceding = {"REFab"}, .following = {"REFab", "ACT-1", "REFpb"}, .latency = V("nRFCab")},
+        {.level = "rank", .preceding = {"REFab"}, .following = {"REFab", "ACT-1", "ACT4_BG-1", "ACT4_BG-2", "ACT16-1", "ACT16-2", "PRE", "PRE4_BG", "PREA", "REFpb"}, .latency = V("nRFCab")},
         {.level = "rank", .preceding = {"ACT-1"}, .following = {"REFpb"}, .latency = V("nPBR2ACT")},
         {.level = "rank", .preceding = {"REFpb"}, .following = {"REFpb"}, .latency = V("nPBR2PBR")},
         /***************************************************************************************************
@@ -626,18 +659,12 @@ class LPDDR5 : public IDRAM, public Implementation {
         {.level = "bankgroup", .preceding = {"ACT-1", "ACT4_BG-1", "ACT16-1"}, .following = {"PRE4_BG"}, .latency = V("nRAS")},
         {.level = "bankgroup", .preceding = {"PRE4_BG"}, .following = {"ACT-1", "ACT4_BG-1"}, .latency = V("nRPab")},
         {.level = "bankgroup", .preceding = {"PRE"}, .following = {"ACT4_BG-1"}, .latency = V("nRPpb")},
-        // Deprecated
-        // {.level = "bankgroup", .preceding = {"ACT-1", "ACT4_BG-1", "ACTAF4_BG-1", "ACT16-1", "ACTAF16-1"}, .following = {"PRE4_BG"}, .latency = V("nRAS")},
-        // {.level = "bankgroup", .preceding = {"PRE4_BG"}, .following = {"ACT-1", "ACT4_BG-1", "ACTAF4_BG-1"}, .latency = V("nRPab")},
-        // {.level = "bankgroup", .preceding = {"PRE"}, .following = {"ACT4_BG-1", "ACTAF4_BG-1"}, .latency = V("nRPpb")},
         /************************************************************
          * CAS <-> RAS
          *************************************************************/
         {.level = "bankgroup", .preceding = {"ACT4_BG-1", "ACT16-1"}, .following = {"MAC4B_INTRA", "AF4B_INTRA", "EWMUL", "EWADD"}, .latency = V("nRCD")},
         {.level = "bankgroup", .preceding = {"RD16", "RD16A", "MAC4B_INTRA", "AF4B_INTRA", "EWMUL", "EWADD", "MACAB", "AFAB"}, .following = {"PRE4_BG"}, .latency = V("nRTP")},
         {.level = "bankgroup", .preceding = {"WRAFLUT", "WRBK"}, .following = {"PRE4_BG"}, .latency = V("nCWL")+V("nBL16")+V("nWR")},
-        // Deprecated
-        // {.level = "bankgroup", .preceding = {"ACT4_BG-1", "ACTAF4_BG-1", "ACT16-1", "ACTAF16-1"}, .following = {"MAC4B_INTRA", "AF4B_INTRA", "EWMUL", "EWADD"}, .latency = V("nRCD")},
         /************************************************************
          * CAS <-> CAS
          *************************************************************/
@@ -653,8 +680,6 @@ class LPDDR5 : public IDRAM, public Implementation {
         {.level = "bank", .preceding = {"ACT-1"}, .following = {"ACT-1"}, .latency = V("nRC")},
         {.level = "bank", .preceding = {"ACT-1", "ACT4_BG-1", "ACT16-1"}, .following = {"PRE"}, .latency = V("nRAS")},
         {.level = "bank", .preceding = {"PRE"},   .following = {"ACT-1"}, .latency = V("nRPpb")},
-        // Deprecated
-        // {.level = "bank", .preceding = {"ACT-1", "ACT4_BG-1", "ACTAF4_BG-1", "ACT16-1", "ACTAF16-1"}, .following = {"PRE"}, .latency = V("nRAS")},
         /************************************************************
          * CAS <-> RAS
          *************************************************************/
@@ -663,8 +688,6 @@ class LPDDR5 : public IDRAM, public Implementation {
         {.level = "bank", .preceding = {"WR16", "WRAFLUT", "WRBK"},  .following = {"PRE"}, .latency = V("nCWL")+V("nBL16")+V("nWR")},
         {.level = "bank", .preceding = {"RD16A"}, .following = {"ACT-1"}, .latency = V("nRTP")+V("nRPpb")},
         {.level = "bank", .preceding = {"WR16A"}, .following = {"ACT-1"}, .latency = V("nCWL")+V("nBL16")+V("nWR")+V("nRPpb")},
-        // Deprecated
-        // {.level = "bank", .preceding = {"ACT-1", "ACT4_BG-1", "ACTAF4_BG-1", "ACT16-1", "ACTAF16-1"}, .following = {"RD16", "RD16A", "WR16", "WR16A"}, .latency = V("nRCD")},
         });
       #undef V
     };
@@ -672,14 +695,16 @@ class LPDDR5 : public IDRAM, public Implementation {
     void set_actions() {
       m_actions.resize(m_levels.size(), std::vector<ActionFunc_t<Node>>(m_commands.size()));
 
-      #define ACTION_DEF(OP)                                                                                                  \
+      #define ACTION_DEF(OP)                                                                                              \
       m_actions[m_levels["rank"]][m_commands[#OP]] = [this] (Node *node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) { \
-        node->m_final_synced_cycle = clk + m_command_latencies(#OP);                                                          \
+        node->m_final_synced_cycle = clk + m_command_latencies(#OP);                                                      \
       };
       
       // m_final_synced_cycle is exactly the execution time for the command.
       // Rank Actions
       m_actions[m_levels["rank"]][m_commands["PREA"]] = Lambdas::Action::Rank::PREab<LPDDR5>;
+      m_actions[m_levels["rank"]][m_commands["REFab"]] = Lambdas::Action::Rank::REFab<LPDDR5>;
+      m_actions[m_levels["rank"]][m_commands["REFab_end"]] = Lambdas::Action::Rank::REFab_end<LPDDR5>;
       m_actions[m_levels["rank"]][m_commands["CASRD"]] = [] (Node* node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) {
         node->m_final_synced_cycle = clk + m_timings["nCL"] + m_timings["nBL16"] + 1;
       };
@@ -702,36 +727,12 @@ class LPDDR5 : public IDRAM, public Implementation {
           }
         }
       };
-      // Deprecated
-      // m_actions[m_levels["rank"]][m_commands["ACTAF16-1"]] = [] (Node* node, int cmd, const AddrHierarchy_t &addr_h, Clk_t clk) {
-      //   for (auto bg : node->m_child_nodes) {
-      //     for (auto bank : bg->m_child_nodes) {
-      //       bank->m_state = m_states["Pre-Opened"];
-      //       bank->m_row_state[addr_h[m_levels["row"]]] = m_states["Pre-Opened"];
-      //     }
-      //   }
-      // };
       m_actions[m_levels["rank"]][m_commands["ACT16-2"]]   = Lambdas::Action::Rank::ACTab<LPDDR5>;
-      // Deprecated
-      // m_actions[m_levels["rank"]][m_commands["ACTAF16-2"]] = Lambdas::Action::Rank::ACTab<LPDDR5>;
-      // m_actions[m_levels["rank"]][m_commands["CASRDAB"]] = [] (Node* node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) {
-      //   node->m_final_synced_cycle = clk + m_timings["nCL"] + m_timings["nBL16"] + 1;
-      // };
-      // m_actions[m_levels["rank"]][m_commands["CASWRAB"]] = [] (Node* node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) {
-      //   node->m_final_synced_cycle = clk + m_timings["nCWL"] + m_timings["nBL16"] + 1;
-      // };
       ACTION_DEF(MACAB);
       ACTION_DEF(AFAB);
       ACTION_DEF(WRAFLUT);
       ACTION_DEF(WRBK);
 
-      // Deprecated
-      // m_actions[m_levels["rank"]][m_commands["CASRD4B_INTRA"]] = [] (Node* node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) {
-      //   node->m_final_synced_cycle = clk + m_timings["nCL"] + m_timings["nBL16"] + 1;
-      // };
-      // m_actions[m_levels["rank"]][m_commands["CASWR4B_INTRA"]] = [] (Node* node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) {
-      //   node->m_final_synced_cycle = clk + m_timings["nCWL"] + m_timings["nBL16"] + 1;
-      // };
       ACTION_DEF(MAC4B_INTRA);
       ACTION_DEF(AF4B_INTRA);
       ACTION_DEF(EWMUL);
@@ -746,17 +747,9 @@ class LPDDR5 : public IDRAM, public Implementation {
           bank->m_row_state[row_id] = m_states["Pre-Opened"];
         }
       };
-      // Deprecated
-      // m_actions[m_levels["bankgroup"]][m_commands["ACTAF4_BG-1"]] = [this] (Node* node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) {
-      //   int row_id = addr_h[m_levels["row"]];
-      //   for (auto bank : node->m_child_nodes) {
-      //     bank->m_state = m_states["Pre-Opened"];
-      //     bank->m_row_state[row_id] = m_states["Pre-Opened"];
-      //   }
-      // };
+      
       // Action for ACT_BG-2: Transition all banks in the group to "Opened".
       m_actions[m_levels["bankgroup"]][m_commands["ACT4_BG-2"]]   = Lambdas::Action::BankGroup::ACT4b_bg<LPDDR5>;
-      // m_actions[m_levels["bankgroup"]][m_commands["ACTAF4_BG-2"]] = Lambdas::Action::BankGroup::ACT4b_bg<LPDDR5>;
       m_actions[m_levels["bankgroup"]][m_commands["PRE4_BG"]]     = Lambdas::Action::BankGroup::PRE4b_bg<LPDDR5>;
 
       // Bank actions
@@ -832,6 +825,10 @@ class LPDDR5 : public IDRAM, public Implementation {
               num_closed_banks++;
               break;
             case m_states["Refreshing"]:
+              // Banks are refreshing - return the same command to indicate "not ready yet"
+              // Timing constraints (REFab -> ACT4_BG with latency nRFCab) will enforce the wait
+              // Once REFab_end executes and banks return to "Closed", this will resolve to ACT4_BG
+              return cmd;
             default: return m_commands["PRE4_BG"];
           }
         }
@@ -840,7 +837,6 @@ class LPDDR5 : public IDRAM, public Implementation {
 
         if (num_open_banks == num_banks_in_bg) {
           Node* rank = node->m_parent_node;
-          // No write operation for AiM bankgroup commands
           if (rank->m_final_synced_cycle < clk) { return m_commands["CASRD"]; }
           else { return cmd; }
         }
@@ -869,10 +865,15 @@ class LPDDR5 : public IDRAM, public Implementation {
               } else { return cmd; }
             } else { return m_commands["PRE"]; }
           }
+          case m_states["Refreshing"]:
+            // Bank is refreshing - return the same command to indicate "not ready yet"
+            // Timing constraints (REFab -> ACT with latency nRFCab) will enforce the wait
+            // Once REFab_end executes and banks return to "Closed", this will resolve to ACT-1
+            return cmd;
           default: {
             spdlog::error("[Preq::Bank] Invalid bank state for an RD/WR command!");
             std::exit(-1);
-          }
+          } 
         }
       };
       m_preqs[m_levels["bank"]][m_commands["RD16"]] = bank_preqs;

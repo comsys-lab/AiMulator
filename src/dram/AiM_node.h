@@ -223,7 +223,7 @@ struct DRAMNodeBase {
   };
 
   int get_preq_command(int command, const AddrHierarchy_t& addr_h, Clk_t m_clk) {
-    // 1. Check if prerequisite commands is defined for the current level.
+    // 1. Check if a prerequisite commands is defined for the current level.
     if (m_spec->m_preqs[m_level][command]) {
       int preq_cmd = m_spec->m_preqs[m_level][command](static_cast<NodeType*>(this), command, addr_h, m_clk);
       // If the lambda returns a valid command (even the original one), it has made a decision.
@@ -274,7 +274,6 @@ struct DRAMNodeBase {
     // The LUT will return a special value (e.g., -1) if the command is not a group command.
     const int action_scope = m_spec->m_command_action_scope[command];
 
-    // action_scope != -1 && 
     if (m_level == action_scope) {
       // FAN-OUT RECURSION:
       // We are at the level where this command becomes a group action.
@@ -328,7 +327,7 @@ struct DRAMNodeBase {
 
     if (!m_child_nodes.size())
       // stop recursion: there were no row hits at any level
-      return false; 
+      return false;
 
     // recursively check for row hits at my child
     return m_child_nodes[child_id]->check_node_open(command, addr_h, m_clk);

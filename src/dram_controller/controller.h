@@ -50,6 +50,12 @@ class IDRAMController : public Clocked<IDRAMController> {
      */
     virtual void tick() = 0;
    
+  protected:
+    enum class SendFalseType {
+      remaining_reqs,
+      req_buffer_full,
+      unknown
+    };
 };
 
 }       // namespace Ramulator

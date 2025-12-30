@@ -1,21 +1,13 @@
 # RD/WR: R/W $(64b addr)
-# 1/4/all-bank AiM: 
+# Single bank AiM: $(op) $(64b addr)
+# 4-bank AND all-bank AiM: 
 #   $(op) $(16b ch_mask) $(rank_addr) $(pch_addr) $(4b bank_addr) $(32b row_addr) $(16b col_addr)
+# All-bank AiM: $(op) $(16b ch_mask) $(32b row_addr) $(16b col_addr)
 # No bank AiM: $(op) $(16b ch_mask)
-# MAC_ABK 21845 0 0 0 21845 16
-# AF_ABK 21845 0 0 0 131070 32
-# MAC_SBK 21845 0 0 0 21845 16
-# AF_SBK 21845 0 0 0 131070 32
-# WR_GB 43690
-# WR_MAC 21845
-# WR_BIAS 43690
-# RD_MAC 21845
-# RD_AF 43690
-R 4140836416
-R 4140836424
-R 4140836432
-R 4140836440
-R 4140836448
-R 4140836456
-R 4140836464
-R 4140836472
+# Following example: 65535 = 0xaaaa,
+# 
+# R 1350072564
+MAC_ABK 1 0 0 0 21845 16
+AF_ABK 1 0 0 0 131070 32
+MAC_ABK 1 0 0 0 21845 16
+AF_ABK 1 0 0 0 131070 32

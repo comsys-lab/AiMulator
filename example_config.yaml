@@ -21,7 +21,7 @@ MemorySystem:
       channel: 1
       rank: 2
     timing:
-      preset: DDR4_2400R
+      preset: DDR4_2400R 
 
   Controller:
     impl: Generic

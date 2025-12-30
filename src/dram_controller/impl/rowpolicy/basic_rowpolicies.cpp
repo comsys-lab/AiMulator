@@ -27,8 +27,6 @@ class ClosedRowPolicy : public IRowPolicy, public Implementation {
     IDRAM* m_dram;
     
     int m_PRE_req_id = -1;
-    // AiM
-    int m_PRE_aim_req_id = -1;
     
     int m_cap = -1;
     
@@ -59,7 +57,6 @@ class ClosedRowPolicy : public IRowPolicy, public Implementation {
       m_row_level = m_dram->m_levels("row");
 
       m_PRE_req_id = m_dram->m_requests("close-row");
-      // m_PRE_aim_req_id = m_dram->m_aim_req("close-row");
 
       m_num_ranks = m_dram->get_level_size("rank");
       m_num_bankgroups = m_dram->get_level_size("bankgroup");

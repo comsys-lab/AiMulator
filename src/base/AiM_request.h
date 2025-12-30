@@ -68,11 +68,17 @@ struct Request {
   Request(Addr_t addr, int type_id);
   Request(AddrHierarchy_t addr_h, int type_id);
   Request(Addr_t addr, int type_id, int source_id, std::function<void(Request&)> callback);
+
   // AiM
+  // Trace-based
   Request(bool is_aim_req, int type_id, int aim_num_banks);
+  // Wrapper
+  Request(bool is_aim_req, int type_id, int aim_num_banks, std::function<void(Request&)> tmp_callback);
+  // New Wrapper
+  Request(bool is_aim_req, int req_type_id, Addr_t addr, int aim_num_banks, std::function<void(Request&)> callback);
 };
 
-inline std::string get_req_type_name(int type_id) {
+inline std::string str_type_name(int type_id) {
   switch (type_id) {
     case Request::Type::Read: return "Read";
     case Request::Type::Write: return "Write";
@@ -99,29 +105,6 @@ inline std::string get_req_type_name(int type_id) {
   }
 };
 
-inline int get_req_type_id(std::string type_name) {
-  if (type_name == "Read") return Request::Type::Read;
-  else if (type_name == "Write") return Request::Type::Write;
-  else if (type_name == "MAC_SBK") return Request::Type::MAC_SBK;
-  else if (type_name == "AF_SBK") return Request::Type::AF_SBK;
-  else if (type_name == "COPY_BKGB") return Request::Type::COPY_BKGB;
-  else if (type_name == "COPY_GBBK") return Request::Type::COPY_GBBK;
-  else if (type_name == "MAC_4BK_INTRA_BG") return Request::Type::MAC_4BK_INTRA_BG;
-  else if (type_name == "AF_4BK_INTRA_BG") return Request::Type::AF_4BK_INTRA_BG;
-  else if (type_name == "EWMUL") return Request::Type::EWMUL;
-  else if (type_name == "EWADD") return Request::Type::EWADD;
-  else if (type_name == "MAC_ABK") return Request::Type::MAC_ABK;
-  else if (type_name == "AF_ABK") return Request::Type::AF_ABK;
-  else if (type_name == "WR_AFLUT") return Request::Type::WR_AFLUT;
-  else if (type_name == "WR_BK") return Request::Type::WR_BK;
-  else if (type_name == "WR_GB") return Request::Type::WR_GB;
-  else if (type_name == "WR_MAC") return Request::Type::WR_MAC;
-  else if (type_name == "WR_BIAS") return Request::Type::WR_BIAS;
-  else if (type_name == "RD_MAC") return Request::Type::RD_MAC;
-  else if (type_name == "RD_AF") return Request::Type::RD_AF;
-  return Request::Type::UNKNOWN;
-}
-
 struct ReqBuffer {
   std::list<Request> buffer;
   size_t max_size = 16384;
@@ -145,7 +128,7 @@ struct ReqBuffer {
     buffer.erase(it);
   }
 };
-    
+
 struct Trace {
   // RW
   int type_id = -1;

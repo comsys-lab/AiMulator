@@ -29,6 +29,14 @@ Logger_t Logging::get(std::string name) {
   }
 }
 
+void Logging::destroy_logger(std::string name) {
+  spdlog::drop("Ramulator::" + name);
+}
+
+void Logging::destroy_all_loggers() {
+  spdlog::drop_all();
+}
+
 bool Logging::_create_base_logger() {
   auto logger = create_logger("Base");
   if (logger) {

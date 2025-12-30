@@ -19,7 +19,7 @@ class AiMController final : public IDRAMController, public Implementation {
       // m_clock_ratio = param<uint>("clock_ratio").required();
 
       m_scheduler = create_child_ifce<IScheduler>();
-      m_refresh = create_child_ifce<IRefreshManager>();
+      // m_refresh = create_child_ifce<IRefreshManager>();
       // m_rowpolicy = create_child_ifce<IRowPolicy>();
 
       if (m_config["plugins"]) {
@@ -226,7 +226,7 @@ class AiMController final : public IDRAMController, public Implementation {
       // 1. Serve completed reads
       serve_completed_reqs();
 
-      m_refresh->tick();
+      // m_refresh->tick();
 
       // 2. Try to find a request to serve.
       ReqBuffer::iterator req_it;
@@ -254,13 +254,6 @@ class AiMController final : public IDRAMController, public Implementation {
         if (req_it->issue == -1) {
           req_it->issue = m_clk - 1;
         }
-
-        std::cerr << "[AiM Controller CH" << m_channel_id << " tick()] ISSUING command=" << req_it->command
-                  << " final_command=" << req_it->final_command
-                  << " type_id=" << req_it->type_id
-                  << " is_aim=" << req_it->is_aim_req
-                  << " clk=" << m_clk << std::endl;
-
         m_dram->issue_command(req_it->command, req_it->addr_h);
         s_num_commands[req_it->command] += 1;
 
@@ -592,122 +585,49 @@ class AiMController final : public IDRAMController, public Implementation {
       // Second, check the rest of the buffers since no request to schedule from the active buffer.
       if (!request_found) {
         // 2.2.1
-        // Check the priority buffer (e.g., refresh requests)
-        // Use scope-aware scheduling: if priority request is not ready,
-        // AiM requests to different targets (e.g., different ranks) can proceed
-        Level_t priority_scope = -1;
-        ReqBuffer::iterator priority_req_it;
+        // Check the priority buffer
         if (m_priority_buffer.size() != 0) {
-          priority_req_it = m_priority_buffer.begin();
-          priority_req_it->command = m_dram->get_preq_command(priority_req_it->final_command, priority_req_it->addr_h);
-          priority_scope = m_dram->m_command_action_scope(priority_req_it->command);
-
-          std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                    << "Priority buffer size=" << m_priority_buffer.size()
-                    << " final_cmd=" << priority_req_it->final_command
-                    << " preq_cmd=" << priority_req_it->command
-                    << " scope=" << priority_scope
-                    << " ready=" << m_dram->check_ready(priority_req_it->command, priority_req_it->addr_h)
-                    << " clk=" << m_clk << std::endl;
-
-          if (m_dram->check_ready(priority_req_it->command, priority_req_it->addr_h)) {
-            // Priority request is ready, serve it
-            request_found = true;
-            req_it = priority_req_it;
-            req_buffer = &m_priority_buffer;
-            std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                      << "Serving priority request!" << std::endl;
-          } else {
-            // Priority request not ready
-            // Channel scope (level 0) -> strict blocking, nothing else can proceed
-            std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                      << "Priority request NOT ready, checking if blocking..." << std::endl;
-            if (priority_scope == 0) {
-              std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                        << "Channel-scope priority -> BLOCKING all other requests" << std::endl;
-              return false;
+          req_it = m_priority_buffer.begin();
+          req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_h);
+          request_found = m_dram->check_ready(req_it->command, req_it->addr_h);
+          req_buffer = &m_priority_buffer;
+          if (!request_found && m_priority_buffer.size() != 0) {
+            if (m_aim_bank_buffer.size() > 0 || m_aim_no_bank_buffer.size() > 0) {
+              std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] BLOCKED by priority_buffer: "
+                        << "priority_buf_size=" << m_priority_buffer.size()
+                        << " priority_cmd=" << req_it->command
+                        << " priority_type=" << req_it->type_id << std::endl;
             }
-            // For other scopes (rank, bankgroup, bank), continue to check AiM buffers
-            // AiM requests to different targets can proceed
-            std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                      << "Non-channel scope -> allowing AiM requests to different targets" << std::endl;
+            return false;
           }
         }
 
         // 2.2.2
         // Check the AiM buffer first, and then read or write, since no request to schedule from the priority buffer.
-        // AiM scheduling uses scope-aware non-blocking:
-        // - Same scope + different target: can pick any ready request
-        // - Different scope: must maintain order (block)
-        //
-        // Helper lambda to check if an AiM request conflicts with a pending priority request
-        // Returns true if the AiM request can proceed (no conflict)
-        auto can_aim_proceed_with_priority = [&](ReqBuffer::iterator aim_it) -> bool {
-          if (priority_scope < 0) {
-            // No pending priority request
-            return true;
-          }
-          // Check if the AiM request targets the same resource as the priority request
-          // For rank-scope priority (e.g., refresh), block if same rank
-          // For bankgroup-scope, block if same bankgroup, etc.
-          // priority_scope is the level index: 0=channel, 1=rank, 2=bankgroup, 3=bank
-          for (int level = 0; level <= priority_scope; level++) {
-            if (aim_it->addr_h[level] != priority_req_it->addr_h[level] &&
-                aim_it->addr_h[level] != -1 && priority_req_it->addr_h[level] != -1) {
-              // Different target at a level <= priority_scope, so no conflict
-              return true;
-            }
-          }
-          // Same target up to priority_scope level -> conflict, block AiM
-          return false;
-        };
-
         if (!request_found) {
-          if (m_aim_bank_buffer.size() != 0 || m_aim_no_bank_buffer.size() != 0) {
-            // Try bank buffer first
-            if (m_aim_bank_buffer.size() != 0) {
-              req_it = m_scheduler->get_best_aim_request(m_aim_bank_buffer);
-              if (req_it != m_aim_bank_buffer.end()) {
-                // Check if this AiM request conflicts with pending priority request
-                if (can_aim_proceed_with_priority(req_it)) {
-                  request_found = true;
-                  req_buffer = &m_aim_bank_buffer;
-                }
+          if (m_aim_bank_buffer.size() != 0) {
+            // AiM does not require request scheduling (in-order execution),
+            // thus, logic is the same as checking priority_buffer, not active, read, and write buffers.
+            req_it = m_aim_bank_buffer.begin();
+            req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_h);
+            request_found = m_dram->check_ready(req_it->command, req_it->addr_h);
+            if (!request_found && (m_aim_bank_buffer.size() > 0 || m_aim_no_bank_buffer.size() > 0)) {
+              std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] AiM req blocked: "
+                        << "preq_cmd=" << req_it->command << " final_cmd=" << req_it->final_command
+                        << " type=" << req_it->type_id << " addr=0x" << std::hex << req_it->addr << std::dec
+                        << " addr_h=[";
+              for (size_t i = 0; i < req_it->addr_h.size(); i++) {
+                std::cerr << req_it->addr_h[i];
+                if (i < req_it->addr_h.size() - 1) std::cerr << ",";
               }
+              std::cerr << "]" << std::endl;
             }
-
-            // If no ready request in bank buffer, try no-bank buffer
-            // But only if scopes are compatible
-            if (!request_found && m_aim_no_bank_buffer.size() != 0) {
-              bool can_try_no_bank = true;
-
-              if (m_aim_bank_buffer.size() != 0) {
-                // Check scope compatibility between bank and no-bank buffers
-                auto bank_first = m_aim_bank_buffer.begin();
-                bank_first->command = m_dram->get_preq_command(bank_first->final_command, bank_first->addr_h);
-                Level_t bank_scope = m_dram->m_command_action_scope(bank_first->command);
-
-                auto no_bank_first = m_aim_no_bank_buffer.begin();
-                no_bank_first->command = m_dram->get_preq_command(no_bank_first->final_command, no_bank_first->addr_h);
-                Level_t no_bank_scope = m_dram->m_command_action_scope(no_bank_first->command);
-
-                // Different scopes -> block (bank buffer takes priority)
-                if (bank_scope != no_bank_scope) {
-                  can_try_no_bank = false;
-                }
-              }
-
-              if (can_try_no_bank) {
-                req_it = m_scheduler->get_best_aim_request(m_aim_no_bank_buffer);
-                if (req_it != m_aim_no_bank_buffer.end()) {
-                  // Check if this AiM request conflicts with pending priority request
-                  if (can_aim_proceed_with_priority(req_it)) {
-                    request_found = true;
-                    req_buffer = &m_aim_no_bank_buffer;
-                  }
-                }
-              }
-            }
+            req_buffer = &m_aim_bank_buffer;
+          } else if (m_aim_no_bank_buffer.size() != 0) {
+            req_it = m_aim_no_bank_buffer.begin();
+            req_it->command = m_dram->get_preq_command(req_it->final_command, req_it->addr_h);
+            request_found = m_dram->check_ready(req_it->command, req_it->addr_h);
+            req_buffer = &m_aim_no_bank_buffer;
           } else {
             // Query the write policy to decide which buffer to serve
             set_write_mode();

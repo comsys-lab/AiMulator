@@ -1,7 +1,6 @@
 #include <vector>
 
 #include "base/base.h"
-#include "dram/AiM_dram.h"
 #include "addr_mapper/addr_mapper.h"
 #include "memory_system/memory_system.h"
 #include "frontend/frontend.h"
@@ -82,11 +81,9 @@ class ChRaBaRoCo final : public LinearMapperBase, public Implementation {
     }
 
     std::vector<Addr_t> convert_pkt_addr(const Trace& trace) override {
-      std::vector<std::string_view> m_dram_hierarchy;
       std::unordered_map<std::string_view, int> level_mem_hierarchy;
-      for (int i = 0; i < m_addr_bits.size(); i++) {
+      for (int i = 0; i < m_dram->m_levels.size(); i++) {
         std::string_view level_name = m_dram->m_levels(i);
-        m_dram_hierarchy.push_back(level_name);
         if (m_dram->m_levels.contains(level_name)) {
           level_mem_hierarchy[level_name] = m_dram->m_levels(level_name);
         }
@@ -156,6 +153,10 @@ class ChRaBaRoCo final : public LinearMapperBase, public Implementation {
       }
       return addrs;
     }
+
+    IDRAM* get_m_dram() override {
+      return m_dram;
+    }
 };
 
 class RoBaRaCoCh final : public LinearMapperBase, public Implementation {
@@ -206,6 +207,10 @@ class RoBaRaCoCh final : public LinearMapperBase, public Implementation {
         addrs[i] = addr;
       }
       return addrs;
+    }
+
+    IDRAM* get_m_dram() override {
+      return m_dram;
     }
 };
 
@@ -262,6 +267,10 @@ class MOP4CLXOR final : public LinearMapperBase, public Implementation {
         addrs[i] = addr;
       }
       return addrs;
+    }
+
+    IDRAM* get_m_dram() override {
+      return m_dram;
     }
 };
 }   // namespace Ramulator

@@ -3,7 +3,6 @@
 #include "dram_controller/controller.h"
 #include "addr_mapper/addr_mapper.h"
 #include "dram/AiM_dram.h"
-#include <yaml-cpp/yaml.h>
 
 namespace Ramulator {
 
@@ -15,10 +14,9 @@ class AiMSystem final : public IMemorySystem, public Implementation {
       // Create device (a top-level node wrapping all channel nodes)
       m_dram = create_child_ifce<IDRAM>();
       m_addr_mapper = create_child_ifce<IAddrMapper>();
-      // m_logger = Logging::create_logger("AiMSystem");
       num_chs = m_dram->get_level_size("channel");
       s_num_reqs = std::vector<std::vector<int>>(num_chs, std::vector<int>(Request::Type::UNKNOWN, 0));
-      // callback = std::bind(&AiMSystem::receive, this, std::placeholders::_1);
+      // callback = std::bind(&AiMDRAMSystem::receive, this, std::placeholders::_1);
       
       // Create memory controllers
       for (int i = 0; i < num_chs; i++) {
@@ -26,22 +24,23 @@ class AiMSystem final : public IMemorySystem, public Implementation {
         controller->m_impl->set_id(fmt::format("Channel {}", i));
         controller->m_channel_id = i;
         m_controllers.push_back(controller);
-        for (int req_type = 0; req_type < Request::Type::UNKNOWN; req_type++) {
-          register_stat(s_num_reqs[i][req_type])
-            .name("CH_{}_total_num_{}_requests", i, get_req_type_name(req_type));
-        }
+        // for (int req_type = 0; req_type < Request::Type::UNKNOWN; req_type++) {
+        //   register_stat(s_num_reqs[i][req_type])
+        //     .name("CH_{}_total_num_{}_requests", i, str_type_name(req_type));
+        // }
       }
     };
 
     bool send(Request req) override {
       m_addr_mapper->apply(req);
-      int channel_id = req.addr_h[0];
-      bool is_success = m_controllers[channel_id]->send(req);
-
-      for (int i = 0; i < num_chs; i++) {
-        if (is_success) { s_num_reqs[i][req.type_id]++; }
-      }
-
+      int ch_id = req.addr_h[0];
+      // std::cout << "[Ramulator (AiM Memory System)] ch_id: " << ch_id << std::endl;
+      bool is_success = m_controllers[ch_id]->send(req);
+      s_num_reqs[ch_id][req.type_id]++;
+      // std::cout << "[Ramulator (AiM Memory System)] is_succes? " << is_success << std::endl;
+      // for (int i = 0; i < num_chs; i++) {
+      //   if (is_success) { s_num_reqs[i][req.type_id]++; }
+      // }
       return is_success;
     };
 
@@ -123,15 +122,15 @@ class AiMSystem final : public IMemorySystem, public Implementation {
       emitter << YAML::EndMap;
       emitter << YAML::Newline;
     }
-
-  protected:
+    
+    protected:
     Clk_t m_clk = 0;
     IDRAM* m_dram;
     uint16_t num_chs;
     IAddrMapper* m_addr_mapper;
     std::vector<IDRAMController*> m_controllers;
     Logger_t m_logger;
-    std::vector<std::queue<Request>> req_queues;
+    std::queue<Request> request_queue;
     std::queue<Request> aim_reqs_waiting_queue;
     std::vector<std::vector<int>> s_num_reqs;
     int AiM_req_id = 0;

@@ -58,8 +58,6 @@ class GDDR6 : public IDRAM, public Implementation {
       "ACT16", "MACAB", "AFAB", "WRAFLUT", "WRBK",
       // No-bank AiM commands
       "WRGB", "WRMAC", "WRBIAS", "RDMAC", "RDAF",
-      // Deprecated
-      // "ACTAF4_BG", "ACTAF16", 
     };
 
     inline static const ImplLUT m_command_addressing_level = LUT (
@@ -81,8 +79,6 @@ class GDDR6 : public IDRAM, public Implementation {
         // No-bank AiM commands
         {"WRGB", "channel"}, {"WRMAC", "bank"}, {"WRBIAS", "bank"},
         {"RDMAC", "bank"}, {"RDAF", "bank"},
-        // Deprecated
-        // {"ACTAF4_BG", "row"}, {"ACTAF16", "row"}, 
       }
     );
 
@@ -101,13 +97,11 @@ class GDDR6 : public IDRAM, public Implementation {
         // {"ACT4_BKS", "bank"}, {"ACTAF4_BKS", "bank"}, {"PRE4_BKS", "bank"},
         // {"MAC4B_INTER", "bank"}, {"AF4B_INTER", "bank"}, {"EWMUL", "bank"}, {"EWADD", "bank"},
         // all-bank commands
-        {"ACT16", "channel"}, {"MACAB", "channel"}, {"AFAB", "channel"},
+        {"ACT16", "channel"}, {"MACAB", "channel"}, {"AFAB", "channel"}, 
         {"WRAFLUT", "channel"}, {"WRBK", "channel"},
         // No-bank AiM commands
         {"WRGB", "channel"}, {"WRMAC", "channel"}, {"WRBIAS", "channel"},
         {"RDMAC", "channel"}, {"RDAF", "channel"},
-        // Deprecated
-        // {"ACTAF4_BG", "bankgroup"}, {"ACTAF16", "channel"}, 
       }
     );
 
@@ -153,9 +147,6 @@ class GDDR6 : public IDRAM, public Implementation {
         {"WRBIAS",         {false,  false,   false,   false}},
         {"RDMAC",          {false,  false,   false,   false}},
         {"RDAF",           {false,  false,   false,   false}},
-        // Deprecated
-        // {"ACTAF4_BG",      {true,   false,   false,   false}},
-        // {"ACTAF16",        {true,   false,   false,   false}},
       }
     );
 
@@ -496,22 +487,22 @@ class GDDR6 : public IDRAM, public Implementation {
       m_command_latencies("WR") = m_timing_vals("nCWL") + m_timing_vals("nWR");
       
       // AiM commands
-      m_command_latencies("MACSB")  = 1;
-      m_command_latencies("AFSB")   = 1;
-      m_command_latencies("RDCP")   = 1;
-      m_command_latencies("WRCP")   = 1;
+      m_command_latencies("MACSB") = 1;
+      m_command_latencies("AFSB")  = 1;
+      m_command_latencies("RDCP")  = 1;
+      m_command_latencies("WRCP")  = 1;
       m_command_latencies("MAC4B_INTRA") = 1;
       m_command_latencies("AF4B_INTRA")  = 1;
-      m_command_latencies("MACAB")  = 1;
-      m_command_latencies("AFAB")   = 1;
-      m_command_latencies("EWMUL")  = 1;
-      m_command_latencies("EWADD")  = 1;
-      m_command_latencies("WRBK")   = 1;
-      m_command_latencies("WRGB")   = m_timing_vals("nCWLGB")  + m_timing_vals("nBL");
-      m_command_latencies("WRMAC")  = m_timing_vals("nCWLREG") + m_timing_vals("nBL");
+      m_command_latencies("MACAB") = 1;
+      m_command_latencies("AFAB")  = 1;
+      m_command_latencies("EWMUL") = 1;
+      m_command_latencies("EWADD") = 1;
+      m_command_latencies("WRBK")  = 1;
+      m_command_latencies("WRGB")  = m_timing_vals("nCWLGB")  + m_timing_vals("nBL");
+      m_command_latencies("WRMAC") = m_timing_vals("nCWLREG") + m_timing_vals("nBL");
       m_command_latencies("WRBIAS") = m_timing_vals("nCWLREG") + m_timing_vals("nBL");
-      m_command_latencies("RDMAC")  = m_timing_vals("nCLREG")  + m_timing_vals("nBL");
-      m_command_latencies("RDAF")   = m_timing_vals("nCLREG")  + m_timing_vals("nBL");
+      m_command_latencies("RDMAC") = m_timing_vals("nCLREG")  + m_timing_vals("nBL");
+      m_command_latencies("RDAF")  = m_timing_vals("nCLREG")  + m_timing_vals("nBL");      
       // AiM timings
       m_timing_vals("nCLREG")  = 0;
       m_timing_vals("nCLGB")   = 1;
@@ -550,14 +541,6 @@ class GDDR6 : public IDRAM, public Implementation {
         {.level = "channel", .preceding = {"ACT16"}, .following = {"PRE4_BG"}, .latency = V("nRAS")},
         {.level = "channel", .preceding = {"PRE", "PRE4_BG", "PREA"}, .following = {"ACT16"}, .latency = V("nRP")},
         {.level = "channel", .preceding = {"PRE4_BG", "PREA"}, .following = {"ACT"}, .latency = V("nRP")},
-        // Deprecated
-        // {.level = "channel", .preceding = {"ACTAF16"}, .following = {"ACTAF16"}, .latency = V("nRRDS")},
-        // {.level = "channel", .preceding = {"ACTAF4_BG"}, .following = {"ACTAF4_BG"}, .latency = V("nRRDS")},
-        // {.level = "channel", .preceding = {"ACT4_BG", "ACTAF4_BG"}, .following = {"ACT"}, .latency = V("nRRDS")},
-        // {.level = "channel", .preceding = {"ACT"}, .following = {"ACT4_BG", "ACTAF4_BG"}, .latency = V("nRRDS")},
-        // {.level = "channel", .preceding = {"ACT", "ACT4_BG", "ACTAF4_BG", "ACT16", "ACTAF16"}, .following = {"PREA"}, .latency = V("nRAS")},
-        // {.level = "channel", .preceding = {"ACT16", "ACTAF16"}, .following = {"PRE4_BG"}, .latency = V("nRAS")},
-        // {.level = "channel", .preceding = {"PRE", "PRE4_BG", "PREA"}, .following = {"ACT16", "ACTAF16"}, .latency = V("nRP")},
         /************************************************************
          * CAS <-> RAS
          *************************************************************/
@@ -568,9 +551,6 @@ class GDDR6 : public IDRAM, public Implementation {
         {.level = "channel", .preceding = {"MACAB", "AFAB"}, .following = {"PRE4_BG"}, .latency = V("nRTP")},
         {.level = "channel", .preceding = {"RDA"}, .following = {"ACT16"}, .latency = V("nRTP")+V("nRP")},
         {.level = "channel", .preceding = {"WRA"}, .following = {"ACT16"}, .latency = V("nCWL")+V("nBL")+V("nWR")+V("nRP")},
-        // Deprecated
-        // {.level = "channel", .preceding = {"ACTAF16"}, .following = {"AF4B_INTRA", "AFAB"}, .latency = V("nRCDRD")},
-        // {.level = "channel", .preceding = {"ACTAF16"}, .following = {"WRAFLUT"}, .latency = V("nRCDWR")},
         /************************************************************
          * CAS -> CAS
          * nCCDS is the minimal latency between two successive distinct column commands that access to DIFFERENT bankgroups
@@ -601,11 +581,11 @@ class GDDR6 : public IDRAM, public Implementation {
         /************************************************************
          * RAS -> REF
          *************************************************************/
-        {.level = "channel", .preceding = {"ACT"}, .following = {"REFab"}, .latency = V("nRC")},
-        {.level = "channel", .preceding = {"PRE"}, .following = {"REFab"}, .latency = V("nRP")},
+        {.level = "channel", .preceding = {"ACT", "ACT4_BG", "ACT16"}, .following = {"REFab"}, .latency = V("nRC")},
+        {.level = "channel", .preceding = {"PRE", "PRE4_BG", "PREA"}, .following = {"REFab"}, .latency = V("nRP")},
         {.level = "channel", .preceding = {"RDA"}, .following = {"REFab"}, .latency = V("nRP")+V("nRTP")},
         {.level = "channel", .preceding = {"WRA"}, .following = {"REFab"}, .latency = V("nCWL")+V("nBL")+V("nWR")+V("nRP")},
-        {.level = "channel", .preceding = {"REFab"}, .following = {"ACT"}, .latency = V("nRFC")},
+        {.level = "channel", .preceding = {"REFab"}, .following = {"ACT", "ACT4_BG", "ACT16"}, .latency = V("nRFC")},
         /************************************************************
          * RAS -> REFp2b
          *************************************************************/
@@ -632,9 +612,6 @@ class GDDR6 : public IDRAM, public Implementation {
         {.level = "bankgroup", .preceding = {"ACT"}, .following = {"ACT"}, .latency = V("nRRDL")},
         {.level = "bankgroup", .preceding = {"ACT", "ACT4_BG"}, .following = {"PRE4_BG"}, .latency = V("nRAS")},
         {.level = "bankgroup", .preceding = {"PRE", "PRE4_BG", "PREA"}, .following = {"ACT4_BG"}, .latency = V("nRP")},
-        // Deprecated
-        // {.level = "bankgroup", .preceding = {"ACT", "ACT4_BG", "ACTAF4_BG"}, .following = {"PRE4_BG"}, .latency = V("nRAS")},
-        // {.level = "bankgroup", .preceding = {"PRE", "PRE4_BG", "PREA"}, .following = {"ACT4_BG"}, .latency = V("nRP")},
         /************************************************************
          * CAS <-> RAS
          ************************************************************/
@@ -644,8 +621,6 @@ class GDDR6 : public IDRAM, public Implementation {
         {.level = "bankgroup", .preceding = {"WR", "WRCP", "WRAFLUT", "WRBK"}, .following = {"PRE4_BG"}, .latency = V("nCWL")+V("nBL")+V("nWR")},
         {.level = "bankgroup", .preceding = {"RDA"}, .following = {"ACT4_BG"}, .latency = V("nRTP")+V("nRP")},
         {.level = "bankgroup", .preceding = {"WRA"}, .following = {"ACT4_BG"}, .latency = V("nCWL")+V("nBL")+V("nWR")+V("nRP")},
-        // Deprecated
-        // {.level = "bankgroup", .preceding = {"ACTAF4_BG"}, .following = {"AF4B_INTRA"}, .latency = V("nRCDRD")},
         /************************************************************
          * CAS -> CAS
          * nCCDL is the minimal latency between two successive distinct column commands that access to the SAME bankgroup
@@ -692,15 +667,14 @@ class GDDR6 : public IDRAM, public Implementation {
       m_actions.resize(m_levels.size(), std::vector<ActionFunc_t<Node>>(m_commands.size()));
 
       // Channel Actions 
-      m_actions[m_levels["channel"]][m_commands["PREA"]]    = Lambdas::Action::Channel::PREab<GDDR6>;
+      m_actions[m_levels["channel"]][m_commands["PREA"]]  = Lambdas::Action::Channel::PREab<GDDR6>;
+      m_actions[m_levels["channel"]][m_commands["REFab"]] = Lambdas::Action::Channel::REFab<GDDR6>;
       // Channel actions; AiM
-      m_actions[m_levels["channel"]][m_commands["ACT16"]]   = Lambdas::Action::Channel::ACTab<GDDR6>;
-      // m_actions[m_levels["channel"]][m_commands["ACTAF16"]] = Lambdas::Action::Channel::ACTab<GDDR6>;
+      m_actions[m_levels["channel"]][m_commands["ACT16"]] = Lambdas::Action::Channel::ACTab<GDDR6>;
 
       // Bankgroup actions; AiM
-      m_actions[m_levels["bankgroup"]][m_commands["PRE4_BG"]]   = Lambdas::Action::BankGroup::PRE4b_bg<GDDR6>;
-      m_actions[m_levels["bankgroup"]][m_commands["ACT4_BG"]]   = Lambdas::Action::BankGroup::ACT4b_bg<GDDR6>;
-      // m_actions[m_levels["bankgroup"]][m_commands["ACTAF4_BG"]] = Lambdas::Action::BankGroup::ACT4b_bg<GDDR6>;
+      m_actions[m_levels["bankgroup"]][m_commands["PRE4_BG"]] = Lambdas::Action::BankGroup::PRE4b_bg<GDDR6>;
+      m_actions[m_levels["bankgroup"]][m_commands["ACT4_BG"]] = Lambdas::Action::BankGroup::ACT4b_bg<GDDR6>;
 
       // Bank actions
       m_actions[m_levels["bank"]][m_commands["ACT"]] = Lambdas::Action::Bank::ACT<GDDR6>;

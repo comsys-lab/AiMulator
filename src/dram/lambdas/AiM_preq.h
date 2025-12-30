@@ -2,6 +2,8 @@
 #define RAMULATOR_DRAM_LAMBDAS_PREQ_H
 
 #include <spdlog/spdlog.h>
+// AiM
+// #include <base/AiM_request.h>
 
 namespace Ramulator {
 namespace Lambdas {
@@ -55,9 +57,10 @@ namespace BankGroup {
         // This bank is closed, which is a valid, non-conflicting state.
         // We just continue checking the other banks.
         case T::m_states["Closed"]: break;
-        // A bank is refreshing, which prevents a group-wide command.
-        // The safest prerequisite is to precharge to reset the group state once refreshing is done.
-        case T::m_states["Refreshing"]: return T::m_commands["PRE4_BG"];
+        // A bank is refreshing - return the same command to indicate "not ready yet"
+        // Timing constraints (REFab -> ACT4_BG with latency nRFCab) will enforce the wait
+        // Once REFab_end executes and banks return to "Closed", this will resolve to ACT4_BG
+        case T::m_states["Refreshing"]: return cmd;
         default:
           spdlog::error("[Preq::BankGroup] Invalid bank state for the 4-bank AiM commands applied to the bankgroup!");
           std::exit(-1);
@@ -71,9 +74,6 @@ namespace BankGroup {
     // that no banks are open to the wrong row. Thus, all banks are closed.
     else if (num_open_banks == 0) {
       return T::m_commands["ACT4_BG"];
-      // Deprecated
-      // if (cmd == T::m_commands["AF4B_INTRA"]) { return T::m_commands["ACTAF4_BG"]; }
-      // else { return T::m_commands["ACT4_BG"]; }
     }
     // MIXED CASE: Some banks are correctly open, others are closed.
     // To perform a parallel operation, we need a uniform state.
@@ -81,35 +81,21 @@ namespace BankGroup {
     else { return T::m_commands["PRE4_BG"]; }
   };
 
-  // TODO: Verify logic of REF for AiM
   template <class T>
   int RequireAllBanksClosed(typename T::Node* node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) {
-    bool any_opened = false;
     if constexpr (T::m_levels["bank"] - T::m_levels["bankgroup"] == 1) {
       for (auto bank : node->m_child_nodes) {
-        switch (bank->m_states) {
-          case T::m_states["Opened"]:
-            any_opened = true;
-            break;
-          case T::m_states["Closed"]:
-          case T::m_states["Refreshing"]: return cmd;
-          default: {
-            spdlog::error("[Preq::Bank] Invalid bank state for an RD/WR command!");
-            std::exit(-1);
-          }
-        }
         if (bank->m_state == T::m_states["Closed"]) { continue; }
         else if (bank->m_state == T::m_states["Refreshing"]) { return cmd; }
         else { return T::m_commands["PRE4_BG"]; }
       }
     } else {
       static_assert(
-        false_v<T>, 
+        false_v<T>,
         "[Preq::BankGroup] Unsupported organization. Please write your own RequireAllBanksClosed function."
       );
     }
-
-    if (any_opened) { return T::m_commands["PRE4_BG"]; }
+    return cmd;
   };
 }       // namespace BankGroup
 
@@ -123,30 +109,35 @@ namespace Rank {
     int num_open_banks = 0;
 
     // This inner lambda checks a single bank for conflicts.
-    // It returns 'false' if a rank-wide precharge (PREA) is required immediately.
-    auto is_target_row_and_not_ref = [&](typename T::Node* bank) -> bool {
+    // It returns:
+    //   -1: Bank is refreshing (special case - caller should return cmd to signal "not ready yet")
+    //    0: Conflict detected (wrong row open - caller should return PREA)
+    //    1: No conflict (bank is in acceptable state)
+    auto is_target_row_and_not_ref = [&](typename T::Node* bank) -> int {
       num_banks++;
       switch (bank->m_state) {
         case T::m_states["Opened"]:
           if (bank->m_row_state.find(addr_h[T::m_levels["row"]]) != bank->m_row_state.end()) { num_open_banks++; }
           // CONFLICT: Wrong row is fully open.
-          else { return false; }
+          else { return 0; }
           break;
         case T::m_states["Pre-Opened"]:
           // Also check Pre-Opened for LPDDR5
           // Bank is open. Check if it's the correct row.
           if (bank->m_row_state.find(addr_h[T::m_levels["row"]]) != bank->m_row_state.end()) { num_preopen_banks++; }
           // CONFLICT: Wrong row is pre-opened.
-          else { return false; }
+          else { return 0; }
           break;
         case T::m_states["Closed"]:
           num_closed_banks++;
           break;
-        // CONFLICT: A bank is refreshing, blocking rank-wide commands.
-        // Any other state is a conflict.
-        default: return false;
+        // REFRESHING: Bank is refreshing - signal to caller to return cmd (not ready yet)
+        case T::m_states["Refreshing"]:
+          return -1;
+        // Any other state is a conflict
+        default: return 0;
       }
-      return true;
+      return 1;
     };
 
     // Iterate through all banks within this rank.
@@ -155,13 +146,17 @@ namespace Rank {
     if constexpr (T::m_levels["bank"] - T::m_levels["rank"] == 2) {
       for (auto bg : node->m_child_nodes) {
         for (auto bank : bg->m_child_nodes) {
-          if (!is_target_row_and_not_ref(bank)) { return T::m_commands["PREA"]; }
+          int check_result = is_target_row_and_not_ref(bank);
+          if (check_result == -1) { return cmd; }  // Bank is refreshing - not ready yet
+          else if (check_result == 0) { return T::m_commands["PREA"]; }  // Conflict - precharge needed
         }
       }
     } else {
       // Fallback for flat rank->bank hierarchies
       for (auto bank : node->m_child_nodes) {
-        if (!is_target_row_and_not_ref(bank)) { return T::m_commands["PREA"]; }
+        int check_result = is_target_row_and_not_ref(bank);
+        if (check_result == -1) { return cmd; }  // Bank is refreshing - not ready yet
+        else if (check_result == 0) { return T::m_commands["PREA"]; }  // Conflict - precharge needed
       }
     }
 
@@ -174,27 +169,14 @@ namespace Rank {
       if (node->m_final_synced_cycle < clk) {
         if (cmd == T::m_commands["WRAFLUT"] || cmd == T::m_commands["WRBK"]) { return T::m_commands["CASWR"]; }
         else { return T::m_commands["CASRD"]; }
-        // Deprecated
-        // if (cmd == T::m_commands["WRAFLUT"] || cmd == T::m_commands["WRBK"]) { return T::m_commands["CASWRAB"]; }
-        // else { return T::m_commands["CASRDAB"]; }
-        // return cmd;
       } else { return cmd; }
     }
     // ALL CLOSED CASE: No banks were correctly open, and no conflicts were found.
     // The next step is to activate them all. We assume a command like 'ACTA' exists
     // that the controller would translate into a sequence of ACT commands.
-    else if (num_preopen_banks == num_banks) {
-      return T::m_commands["ACT16-2"];
-      // Deprecated
-      // if (cmd == T::m_commands["AFAB"]) { return T::m_commands["ACTAF16-2"]; }
-      // else { return T::m_commands["ACT16-2"]; }
-    }
-    else if (num_closed_banks == num_banks) {
-      return T::m_commands["ACT16-1"];
-      // Deprecated
-      // if (cmd == T::m_commands["AFAB"]) { return T::m_commands["ACTAF16-1"]; }
-      // else { return T::m_commands["ACT16-1"]; }
-    }
+    else if (num_preopen_banks == num_banks) { return T::m_commands["ACT16-2"]; }
+    else if (num_closed_banks == num_banks) { return T::m_commands["ACT16-1"]; }
+    // TODO: Handling ACTAF commands
     else { return T::m_commands["PREA"]; }
   };
 
@@ -241,25 +223,28 @@ namespace Channel {
     int num_open_banks = 0;
 
     // This lambda contains the core logic for checking a single bank's state.
-    // It returns 'false' if a channel-wide precharge (PREA) is required immediately.
-    auto is_target_row_or_closed = [&](typename T::Node* bank) -> bool {
+    // It returns:
+    //   -1: Bank is refreshing (special case - caller should return cmd to signal "not ready yet")
+    //    0: Conflict detected (wrong row open - caller should return PREA)
+    //    1: No conflict (bank is in acceptable state)
+    auto is_target_row_or_closed = [&](typename T::Node* bank) -> int {
       num_banks++;
       switch (bank->m_state) {
         case T::m_states["Opened"]:
           // Bank is open. Check if it's the correct row.
           if (bank->m_row_state.find(addr_h[T::m_levels["row"]]) != bank->m_row_state.end()) { num_open_banks++; }
           // Conflict: Bank is open to the WRONG row. Must precharge everything.
-          else { return false; }
+          else { return 0; }
           break;
         // This bank is closed. This is a valid, non-conflicting state.
         case T::m_states["Closed"]: break;
-        // Conflict: A bank is refreshing, which blocks channel-wide commands.
-        case T::m_states["Refreshing"]: return false;
+        // REFRESHING: Bank is refreshing - signal to caller to return cmd (not ready yet)
+        case T::m_states["Refreshing"]: return -1;
         default:
           spdlog::error("[Preq::Channel] Invalid bank state encountered!");
           std::exit(-1);
       }
-      return true;
+      return 1;
     };
 
     // Statically choose the correct traversal path based on the DRAM hierarchy.
@@ -267,14 +252,18 @@ namespace Channel {
     if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 2) {
       for (auto bg : node->m_child_nodes) {
         for (auto bank : bg->m_child_nodes) {
-          if (!is_target_row_or_closed(bank)) { return T::m_commands["PREA"]; }
+          int check_result = is_target_row_or_closed(bank);
+          if (check_result == -1) { return cmd; }  // Bank is refreshing - not ready yet
+          else if (check_result == 0) { return T::m_commands["PREA"]; }  // Conflict - precharge needed
         }
       }
     } else if constexpr (T::m_levels["bank"] - T::m_levels["channel"] == 3) {
       for (auto pc : node->m_child_nodes) {
         for (auto bg : pc->m_child_nodes) {
           for (auto bank : bg->m_child_nodes) {
-            if (!is_target_row_or_closed(bank)) { return T::m_commands["PREA"]; }
+            int check_result = is_target_row_or_closed(bank);
+            if (check_result == -1) { return cmd; }  // Bank is refreshing - not ready yet
+            else if (check_result == 0) { return T::m_commands["PREA"]; }  // Conflict - precharge needed
           }
         }
       }
@@ -290,9 +279,6 @@ namespace Channel {
     // This means all banks are in the "Closed" state.
     else if (num_open_banks == 0) {
       return T::m_commands["ACT16"];
-      // Deprecated
-      // if (cmd == T::m_commands["AFAB"]) { return T::m_commands["ACTAF16"]; }
-      // else { return T::m_commands["ACT16"]; }
     }
     // MIXED CASE: Some banks are correctly open, and the rest are closed.
     // To get to a uniform state for a parallel command, we must precharge everything.
@@ -305,6 +291,7 @@ namespace Channel {
       for (auto bg : node->m_child_nodes) {
         for (auto bank: bg->m_child_nodes) {
           if (bank->m_state == T::m_states["Closed"]) { continue; }
+          else if (bank->m_state == T::m_states["Refreshing"]) { return cmd; }
           else { return T::m_commands["PREA"]; }
         }
       }
@@ -313,6 +300,7 @@ namespace Channel {
         for (auto bg : pc->m_child_nodes) {
           for (auto bank: bg->m_child_nodes) {
             if (bank->m_state == T::m_states["Closed"]) { continue; }
+            else if (bank->m_state == T::m_states["Refreshing"]) { return cmd; }
             else { return T::m_commands["PREA"]; }
           }
         }

@@ -35,7 +35,7 @@ class Stats {
     bool is_empty() {
       return _registry.size() == 0;
     }
-
+    
     const Registry_t<StatWrapperBase*>& registry() const {
       return _registry;
     }
