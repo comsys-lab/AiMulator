@@ -1,0 +1,14 @@
+# RD/WR: R/W $(64b addr)
+# All-bank AiM: $(op) $(16b ch_mask) $(32b row_addr) $(16b col_addr)
+# 4-bank AiM: $(op) $(16b ch_mask) $(16b bank_mask) $(32b row_addr) $(16b col_addr)
+# Single bank AiM: $(op) $(64b addr) 
+# No bank AiM: $(op) $(16b ch_mask)
+# 0xd_a000_0801: 모든 hierarchy에서 address가 1
+R 1350072564
+R 1350072572
+R 1350072480
+R 1350072488
+W 1350072560
+W 1350072568
+W 1350072484
+W 1350072492

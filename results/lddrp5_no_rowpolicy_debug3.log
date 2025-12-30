@@ -1,0 +1,246 @@
+[Ramulator::AiMPacketTrace] [info] Loading trace file ./test/aim/00_test_aim_gemv.trace ...
+[Ramulator::AiMPacketTrace] [info] Loaded 8 lines.
+
+type id: 0, is_success: 1
+m_read_buffer size: 1
+clk: 1 command: 0
+
+type id: 0, is_success: 1
+m_read_buffer size: 2
+
+type id: 0, is_success: 1
+m_read_buffer size: 3
+clk: 2 command: 1
+
+type id: 0, is_success: 1
+m_read_buffer size: 3
+
+type id: 1, is_success: 1
+m_write_buffer size: 1
+
+type id: 1, is_success: 1
+m_write_buffer size: 2
+clk: 3, rank final synced cycle: -1
+clk: 3 command: 4
+
+type id: 1, is_success: 1
+m_write_buffer size: 3
+
+type id: 1, is_success: 1
+m_write_buffer size: 4
+clk: 4, rank final synced cycle: 7
+clk: 4, rank final synced cycle: 7
+clk: 4, rank final synced cycle: 7
+clk: 4, rank final synced cycle: 7
+clk: 5, rank final synced cycle: 7
+clk: 5, rank final synced cycle: 7
+clk: 5, rank final synced cycle: 7
+clk: 5, rank final synced cycle: 7
+clk: 6, rank final synced cycle: 7
+clk: 6, rank final synced cycle: 7
+clk: 6, rank final synced cycle: 7
+clk: 6, rank final synced cycle: 7
+clk: 7, rank final synced cycle: 7
+clk: 7, rank final synced cycle: 7
+clk: 7, rank final synced cycle: 7
+clk: 7, rank final synced cycle: 7
+clk: 8, rank final synced cycle: 7
+clk: 8 command: 4
+clk: 9, rank final synced cycle: 12
+clk: 9, rank final synced cycle: 12
+clk: 9, rank final synced cycle: 12
+clk: 9, rank final synced cycle: 12
+clk: 10, rank final synced cycle: 12
+clk: 10, rank final synced cycle: 12
+clk: 10, rank final synced cycle: 12
+clk: 10, rank final synced cycle: 12
+clk: 11, rank final synced cycle: 12
+clk: 11, rank final synced cycle: 12
+clk: 11, rank final synced cycle: 12
+clk: 11, rank final synced cycle: 12
+clk: 12, rank final synced cycle: 12
+clk: 12, rank final synced cycle: 12
+clk: 12, rank final synced cycle: 12
+clk: 12, rank final synced cycle: 12
+clk: 13, rank final synced cycle: 12
+clk: 13 command: 4
+clk: 14, rank final synced cycle: 17
+clk: 14, rank final synced cycle: 17
+clk: 14, rank final synced cycle: 17
+clk: 14, rank final synced cycle: 17
+clk: 15, rank final synced cycle: 17
+clk: 15, rank final synced cycle: 17
+clk: 15, rank final synced cycle: 17
+clk: 15, rank final synced cycle: 17
+clk: 16, rank final synced cycle: 17
+clk: 16 command: 6
+clk: 17, rank final synced cycle: 40
+clk: 17, rank final synced cycle: 40
+clk: 17, rank final synced cycle: 40
+clk: 18, rank final synced cycle: 40
+clk: 18, rank final synced cycle: 40
+clk: 18, rank final synced cycle: 40
+clk: 19, rank final synced cycle: 40
+clk: 19, rank final synced cycle: 40
+clk: 19, rank final synced cycle: 40
+clk: 20, rank final synced cycle: 40
+clk: 20, rank final synced cycle: 40
+clk: 20, rank final synced cycle: 40
+clk: 20 command: 6
+clk: 21, rank final synced cycle: 44
+clk: 21, rank final synced cycle: 44
+clk: 22, rank final synced cycle: 44
+clk: 22, rank final synced cycle: 44
+clk: 23, rank final synced cycle: 44
+clk: 23, rank final synced cycle: 44
+clk: 24, rank final synced cycle: 44
+clk: 24, rank final synced cycle: 44
+clk: 24 command: 6
+clk: 25, rank final synced cycle: 48
+clk: 26, rank final synced cycle: 48
+clk: 27, rank final synced cycle: 48
+clk: 28, rank final synced cycle: 48
+clk: 28 command: 6
+clk: 35 command: 2
+clk: 50 command: 0
+clk: 51 command: 1
+clk: 52, rank final synced cycle: 52
+clk: 52, rank final synced cycle: 52
+clk: 52, rank final synced cycle: 52
+clk: 52, rank final synced cycle: 52
+clk: 53, rank final synced cycle: 52
+clk: 53 command: 5
+clk: 54, rank final synced cycle: 65
+clk: 54, rank final synced cycle: 65
+clk: 54, rank final synced cycle: 65
+clk: 54, rank final synced cycle: 65
+clk: 55, rank final synced cycle: 65
+clk: 55, rank final synced cycle: 65
+clk: 55, rank final synced cycle: 65
+clk: 55, rank final synced cycle: 65
+clk: 56, rank final synced cycle: 65
+clk: 56, rank final synced cycle: 65
+clk: 56, rank final synced cycle: 65
+clk: 56, rank final synced cycle: 65
+clk: 57, rank final synced cycle: 65
+clk: 57, rank final synced cycle: 65
+clk: 57, rank final synced cycle: 65
+clk: 57, rank final synced cycle: 65
+clk: 58, rank final synced cycle: 65
+clk: 58, rank final synced cycle: 65
+clk: 58, rank final synced cycle: 65
+clk: 58, rank final synced cycle: 65
+clk: 59, rank final synced cycle: 65
+clk: 59, rank final synced cycle: 65
+clk: 59, rank final synced cycle: 65
+clk: 59, rank final synced cycle: 65
+clk: 60, rank final synced cycle: 65
+clk: 60, rank final synced cycle: 65
+clk: 60, rank final synced cycle: 65
+clk: 60, rank final synced cycle: 65
+clk: 61, rank final synced cycle: 65
+clk: 61, rank final synced cycle: 65
+clk: 61, rank final synced cycle: 65
+clk: 61, rank final synced cycle: 65
+clk: 62, rank final synced cycle: 65
+clk: 62, rank final synced cycle: 65
+clk: 62, rank final synced cycle: 65
+clk: 62, rank final synced cycle: 65
+clk: 63, rank final synced cycle: 65
+clk: 63, rank final synced cycle: 65
+clk: 63, rank final synced cycle: 65
+clk: 63, rank final synced cycle: 65
+Frontend:
+  impl: AiMPacketTrace
+  AddrMapper:
+    impl: ChRaBaRoCo
+
+
+MemorySystem:
+  impl: AiMSystem
+  total_num_RD_AF_requests: 0
+  total_num_WR_BIAS_requests: 0
+  total_num_WR_GB_requests: 0
+  total_num_WR_AFLUT_requests: 0
+  total_num_RD_MAC_requests: 0
+  total_num_Read_requests: 4
+  total_num_MAC_SBK_requests: 0
+  total_num_AF_SBK_requests: 0
+  total_num_Write_requests: 4
+  total_num_MAC_ABK_requests: 0
+  total_num_COPY_BKGB_requests: 0
+  total_num_COPY_GBBK_requests: 0
+  total_num_WR_MAC_requests: 0
+  total_num_MAC_4BK_INTRA_BG_requests: 0
+  total_num_AF_ABK_requests: 0
+  total_num_AF_4BK_INTRA_BG_requests: 0
+  total_num_AF_4BK_INTER_BG_requests: 0
+  total_num_MAC_4BK_INTER_BG_requests: 0
+  total_num_WR_BK_requests: 0
+  total_num_EWMUL_requests: 0
+  total_num_EWADD_requests: 0
+  DRAM:
+    impl: LPDDR5
+  AddrMapper:
+    impl: ChRaBaRoCo
+
+
+  Controller:
+    impl: AiMController
+    id: Channel 0
+    CH0_num_RDMAC_commands: 0  # total number of RDMAC commands
+    CH0_num_WRBIAS_commands: 0  # total number of WRBIAS commands
+    CH0_num_WRMAC_commands: 0  # total number of WRMAC commands
+    CH0_num_WRGB_commands: 0  # total number of WRGB commands
+    CH0_num_WRBK_commands: 0  # total number of WRBK commands
+    CH0_num_WRAFLUT_commands: 0  # total number of WRAFLUT commands
+    CH0_num_CASWRAB_commands: 0  # total number of CASWRAB commands
+    CH0_num_ACTAF16-2_commands: 0  # total number of ACTAF16-2 commands
+    CH0_num_CASRDAB_commands: 0  # total number of CASRDAB commands
+    CH0_num_ACT16-2_commands: 0  # total number of ACT16-2 commands
+    CH0_active_cycles: 0  # total number of active cycles
+    CH0_num_EWADD_commands: 0  # total number of EWADD commands
+    CH0_num_EWMUL_commands: 0  # total number of EWMUL commands
+    CH0_num_AFAB_commands: 0  # total number of AFAB commands
+    CH0_num_CASRD_commands: 3  # total number of CASRD commands
+    CH0_Read_cycles: 4
+    CH0_num_CASWR_commands: 1  # total number of CASWR commands
+    CH0_num_RD16_commands: 4  # total number of RD16 commands
+    CH0_num_PREA_commands: 0  # total number of PREA commands
+    CH0_num_WR16A_commands: 0  # total number of WR16A commands
+    CH0_num_WRCP_commands: 0  # total number of WRCP commands
+    CH0_precharged_cycles: 0  # total number of precharged cycles
+    CH0_num_ACT4_BG-2_commands: 0  # total number of ACT4_BG-2 commands
+    CH0_num_ACTAF16-1_commands: 0  # total number of ACTAF16-1 commands
+    CH0_num_RD16A_commands: 0  # total number of RD16A commands
+    CH0_num_RFMab_commands: 0  # total number of RFMab commands
+    CH0_num_MACAB_commands: 0  # total number of MACAB commands
+    CH0_num_ACT-2_commands: 2  # total number of ACT-2 commands
+    CH0_num_ACT-1_commands: 2  # total number of ACT-1 commands
+    CH0_Write_cycles: 0
+    CH0_num_REFpb_commands: 0  # total number of REFpb commands
+    CH0_num_RFMpb_commands: 0  # total number of RFMpb commands
+    CH0_num_PRE4_BG_commands: 0  # total number of PRE4_BG commands
+    CH0_num_ACTAF4_BG-1_commands: 0  # total number of ACTAF4_BG-1 commands
+    CH0_num_MAC4B_INTRA_commands: 0  # total number of MAC4B_INTRA commands
+    CH0_num_MACSB_commands: 0  # total number of MACSB commands
+    CH0_num_AFSB_commands: 0  # total number of AFSB commands
+    CH0_num_REFab_commands: 0  # total number of REFab commands
+    CH0_num_ACT4_BG-1_commands: 0  # total number of ACT4_BG-1 commands
+    CH0_idle_cycles: 0  # total number of idle cycles
+    CH0_num_ACTAF4_BG-2_commands: 0  # total number of ACTAF4_BG-2 commands
+    CH0_num_ACT16-1_commands: 0  # total number of ACT16-1 commands
+    CH0_num_PRE_commands: 1  # total number of PRE commands
+    CH0_num_RDCP_commands: 0  # total number of RDCP commands
+    CH0_num_CASRD4B_INTRA_commands: 0  # total number of CASRD4B_INTRA commands
+    CH0_num_WR16_commands: 0  # total number of WR16 commands
+    CH0_num_CASWR4B_INTRA_commands: 0  # total number of CASWR4B_INTRA commands
+    CH0_num_RDAF_commands: 0  # total number of RDAF commands
+    CH0_num_AF4B_INTRA_commands: 0  # total number of AF4B_INTRA commands
+    Scheduler:
+      impl: FRFCFS
+    RefreshManager:
+      impl: AllBank
+
+
+
