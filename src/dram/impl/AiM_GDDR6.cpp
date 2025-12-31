@@ -17,7 +17,7 @@ class GDDR6 : public IDRAM, public Implementation {
       {"GDDR6_32Gb_x16", {32<<10,  16, {2,  4, 4, 1<<15, 1<<11}}},
       // {"GDDR6_AiM_32Gb", {32<<10, 16, {1,  4, 4, 1<<17, 1<<10}}},
       // 64 GB AiM
-      {"GDDR6_AiM_512Gb", {128<<10, 16, {16, 4, 4, 1<<14, 1<<10}}},
+      {"16X_GDDR6_AiM_32Gb_x16", {128<<10, 16, {16, 4, 4, 1<<14, 1<<10}}},
     };
 
     inline static const std::map<std::string, std::vector<int>> timing_presets = {
@@ -321,7 +321,8 @@ class GDDR6 : public IDRAM, public Implementation {
   private:
     void set_organization() {
       // Channel width
-      m_channel_width = param_group("org").param<int>("channel_width").default_val(64);
+      // For AiM, the channel_width defaults to 16 (refer to the org_presets)
+      m_channel_width = param_group("org").param<int>("channel_width").default_val(16);
 
       // Organization
       m_organization.count.resize(m_levels.size(), -1);
@@ -439,7 +440,7 @@ class GDDR6 : public IDRAM, public Implementation {
 
       // Refresh timings
       // tRFC table (unit is nanosecond!)
-      constexpr int tRFC_TABLE[3][3] = {
+      constexpr int tRFC_TABLE[3][4] = {
       //  4Gb   8Gb  16Gb
         { 260,  360,  550}, // Normal refresh (tRFC1)
         { 160,  260,  350}, // FGR 2x (tRFC2)

@@ -1,7 +1,11 @@
 #include "dram/AiM_dram.h"
 #include "dram/AiM_lambdas.h"
 
+DECLARE_DEBUG_FLAG(LPDDR5)
+
 namespace Ramulator {
+
+ENABLE_DEBUG_FLAG(LPDDR5)
 
 class LPDDR5 : public IDRAM, public Implementation {
   RAMULATOR_REGISTER_IMPLEMENTATION(IDRAM, LPDDR5, "LPDDR5", "LPDDR5-AiM Device Model")
@@ -262,51 +266,22 @@ class LPDDR5 : public IDRAM, public Implementation {
     void tick() override {
       m_clk++;
 
-      if (m_future_actions.size() > 0) {
-        std::cerr << "[AiM_LPDDR5::tick] Current cycle: " << m_clk
-                  << ", Future actions pending: " << m_future_actions.size() << std::endl;
-      }
-
       // Process future actions (e.g., REFab_end after nRFCab cycles)
       for (int i = m_future_actions.size() - 1; i >= 0; i--) {
         auto& future_action = m_future_actions[i];
         if (future_action.clk == m_clk) {
           int channel_id = future_action.addr_h[m_levels["channel"]];
           int rank_id = future_action.addr_h[m_levels["rank"]];
-          // std::cerr << "[AiM_LPDDR5::tick] EXECUTING future action: cmd=" << m_commands(future_action.cmd)
-          //           << " channel=" << channel_id
-          //           << " rank=" << rank_id
-          //           << " cycle=" << m_clk << std::endl;
-
-          // Log bank states before REFab_end
-          if (future_action.cmd == m_commands["REFab_end"]) {
-            auto* rank = m_channels[channel_id]->m_child_nodes[rank_id];
-            std::cerr << "[AiM_LPDDR5::tick] REFab_end - Bank states BEFORE:" << std::endl;
-            for (auto* bg : rank->m_child_nodes) {
-              for (auto* bank : bg->m_child_nodes) {
-                std::cerr << "  BG[" << bg->m_node_id << "] Bank[" << bank->m_node_id << "] = "
-                         << m_states(bank->m_state) << std::endl;
-              }
-            }
-          }
+          DEBUG_LOG(LPDDR5, m_logger,
+                    "[AiMulator: LPDDR5 tick()] EXECUTING future action: cmd={}, channel={}, rank={}, cycle={}",
+                    m_commands(future_action), channel_id, rank_id, m_clk);
 
           m_channels[channel_id]->update_states(future_action.cmd, future_action.addr_h, m_clk);
-
-          // Log bank states after REFab_end
-          if (future_action.cmd == m_commands["REFab_end"]) {
-            auto* rank = m_channels[channel_id]->m_child_nodes[rank_id];
-            std::cerr << "[AiM_LPDDR5::tick] REFab_end - Bank states AFTER:" << std::endl;
-            for (auto* bg : rank->m_child_nodes) {
-              for (auto* bank : bg->m_child_nodes) {
-                std::cerr << "  BG[" << bg->m_node_id << "] Bank[" << bank->m_node_id << "] = "
-                         << m_states(bank->m_state) << std::endl;
-              }
-            }
-          }
-
           m_future_actions.erase(m_future_actions.begin() + i);
-          std::cerr << "[AiM_LPDDR5::tick] Future action executed and removed. Remaining: "
-                    << m_future_actions.size() << std::endl;
+          
+          DEBUG_LOG(LPDDR5, m_logger,
+                    "[AiMulator: LPDDR5 tick()] Future action executed and removed. Remaining: {}",
+                    m_future_actions.size());
         }
       }
     };
@@ -322,6 +297,14 @@ class LPDDR5 : public IDRAM, public Implementation {
       set_rowopens();
       
       create_nodes();
+
+      auto existing logger = spdlog::get("LPDDR5");
+      if (existing_logger) {
+        m_logger = existing_logger;
+      } else {
+        m_logger = Logging::create_logger("LPDDR5");
+      }
+      DEBUG_LOG(LPDDR5, m_logger, "LPDDR5 initialized!");
     };
 
     void issue_command(int command, const AddrHierarchy_t& addr_h) override {
@@ -365,14 +348,16 @@ class LPDDR5 : public IDRAM, public Implementation {
       case m_commands["REFab"]: {
         // Schedule REFab_end to execute after nRFCab cycles
         Clk_t refab_end_cycle = m_clk + m_timing_vals("nRFCab") - 1;
-        std::cerr << "[AiM_LPDDR5::issue_command] REFab issued at cycle " << m_clk
-                  << ". Scheduling REFab_end for cycle " << refab_end_cycle
-                  << " (nRFCab=" << m_timing_vals("nRFCab") << ")"
-                  << " channel=" << addr_h[m_levels["channel"]]
-                  << " rank=" << addr_h[m_levels["rank"]] << std::endl;
+        
+        DEBUG_LOG(LPDDR5, m_logger,
+                  "[AiMulator: LPDDR5 issue_command()] REFab issued at cycle={}. Scheduling REFab_end for cycle={}, (nRFCAab={}), channel={}, rank={}",
+                  m_clk, refab_end_cycle, m_timing_vals("nRFCab"), addr_h[m_levels["channel"], addr_h[m_levels["rank"]]]);
+        
         m_future_actions.push_back({m_commands["REFab_end"], addr_h, m_clk + m_timing_vals("nRFCab") - 1});
-        std::cerr << "[AiM_LPDDR5::issue_command] Future actions count after REFab: "
-                  << m_future_actions.size() << std::endl;
+
+        DEBUG_LOG(LPDDR5, m_logger,
+                  "[AiMulator: LPDDR5 issue_command()] Future actions count after REFab: {}",
+                  m_future_actions.size());
         break;
       }
       default:
@@ -403,7 +388,8 @@ class LPDDR5 : public IDRAM, public Implementation {
   private:
     void set_organization() {
       // Channel width
-      m_channel_width = param_group("org").param<int>("channel_width").default_val(32);
+      // For AiM, the channel_width defaults to 16 (refer to the org_presets)
+      m_channel_width = param_group("org").param<int>("channel_width").default_val(16);
 
       // Organization
       m_organization.count.resize(m_levels.size(), -1);
@@ -506,13 +492,13 @@ class LPDDR5 : public IDRAM, public Implementation {
       };
 
       constexpr int tPBR2PBR_TABLE[5] = {
-      //  2Gb   4Gb   8Gb  16Gb  32Gb
-          60,   90,   90,  90,    90
+      //  2Gb   4Gb   8Gb  16Gb,  32Gb
+          60,   90,   90,  90,     90
       };
 
       constexpr int tPBR2ACT_TABLE[5] = {
       //  2Gb   4Gb   8Gb  16Gb  32Gb
-          8,    8,    8,   8,    8
+          8,    8,    8,   8,     8,
       };
 
       // tREFI(base) table (unit is nanosecond!)

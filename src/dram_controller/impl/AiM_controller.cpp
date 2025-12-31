@@ -7,7 +7,11 @@
 
 #include <iomanip>
 
+DECLARE_DEBUG_FLAG(AiMController)
+
 namespace Ramulator {
+
+ENABLE_DEBUG_FLAG(AiMController)
 
 class AiMController final : public IDRAMController, public Implementation {
   RAMULATOR_REGISTER_IMPLEMENTATION(IDRAMController, AiMController, "AiMController", "AiM controller.");
@@ -35,12 +39,13 @@ class AiMController final : public IDRAMController, public Implementation {
       m_bank_addr_idx = m_dram->m_levels("bank");
       m_priority_buffer.max_size = 512 * 3 + 32;
       auto existing_logger = spdlog::get("AiMController[" + std::to_string(m_channel_id) + "]");
-      // if (existing_logger) {
-      //   m_logger = existing_logger;
-      // } else {
-      //   m_logger = Logging::create_logger("AiMController[" + std::to_string(m_channel_id) + "]");
-      // }
+      if (existing_logger) {
+        m_logger = existing_logger;
+      } else {
+        m_logger = Logging::create_logger("AiMController[" + std::to_string(m_channel_id) + "]");
+      }
 
+      DEBUG_LOG(AiMController, m_logger, "AiM Controller initialized for channel {}!", m_channel_id);
       // m_num_cores = frontend->get_num_cores();
       // s_read_row_hits_per_core.resize(m_num_cores, 0);
       // s_read_row_misses_per_core.resize(m_num_cores, 0);
@@ -122,19 +127,24 @@ class AiMController final : public IDRAMController, public Implementation {
     };
 
     bool send(Request& req) override {
-      if (req.is_aim_req) {
-        std::cerr << "[AiM Controller CH" << m_channel_id << " send()] type: " << req.type_id << " addr: 0x" << std::hex << req.addr
-                  << " is_aim: " << req.is_aim_req << " aim_num_banks: " << std::dec << req.aim_num_banks << std::endl;
-      }
+
+      DEBUG_LOG(AiMController, m_logger,
+                "[AiMulator: Ctrl, CH{} send()] type: {} addr: 0x{:x} is_aim: {} aim_num_banks: {}",
+                m_channel_id, req.type_id, req.addr, req.is_aim_req, req.aim_num_banks);
+
       if (!req.is_aim_req) {
         if (m_aim_bank_buffer.size() != 0 || m_aim_no_bank_buffer.size() != 0) {
-          std::cerr << "[AiM Controller CH" << m_channel_id << " send()] REJECTED: AiM buffer not empty" << std::endl;
+          DEBUG_LOG(AiMController, m_logger, 
+                    "[AiMulator: Ctrl, CH{} send()] REJECTED: AiM buffer not empty",
+                    m_channel_id);
           return false;
         }
         req.final_command = m_dram->m_request_translations(req.type_id);
       } else {
         if (m_write_buffer.size() != 0 || m_read_buffer.size() != 0) {
-          std::cerr << "[AiM Controller CH" << m_channel_id << " send()] REJECTED: RW buffer not empty" << std::endl;
+          DEBUG_LOG(AiMController, m_logger,
+                    "[AiMulator: Ctrl, CH{} send()] REJECTED: RD/WR buffer not empty",
+                    m_channel_id);
           return false;
         }
         // RD/WR excluded.
@@ -161,25 +171,33 @@ class AiMController final : public IDRAMController, public Implementation {
       if (req.type_id == Request::Type::Read) {
         if (!m_read_buffer.enqueue(req)) {
           req.arrive = -1;
-          throw std::runtime_error("Buffer (Read) is full!");
+          DEBUG_LOG(AiMController, m_logger, "Read Buffer FULL!");
+          return false;
         }
       } else if (req.type_id == Request::Type::Write) {
         if (!m_write_buffer.enqueue(req)) {
           req.arrive = -1;
-          throw std::runtime_error("Buffer (Write) is full!");
+          DEBUG_LOG(AiMController, m_logger, "Write Buffer FULL!");
+          return false;
         }
       } else if (req.is_aim_req && req.aim_num_banks != 0) {
         if (!m_aim_bank_buffer.enqueue(req)) {
           req.arrive = -1;
-          throw std::runtime_error("Buffer (AiM Bank Ops) is full!");
+          DEBUG_LOG(AiMController, m_logger, "AiM Bank Buffer FULL!");
+          return false;
         }
-        std::cerr << "[AiM Controller CH" << m_channel_id << " send()] Enqueued to m_aim_bank_buffer, size=" << m_aim_bank_buffer.size() << std::endl;
+        DEBUG_LOG(AiMController, m_logger, 
+                  "[AiMulator: Ctrl, CH{} send()] Enqueued to m_aim_bank_buffer, size={}", 
+                  m_channel_id, m_aim_bank_buffer.size());
       } else if (req.is_aim_req && req.aim_num_banks == 0) {
         if (!m_aim_no_bank_buffer.enqueue(req)) {
           req.arrive = -1;
-          throw std::runtime_error("Buffer (AiM No Bank Ops) is full!");
+          DEBUG_LOG(AiMController, m_logger, "AiM NO-Bank Buffer FULL!");
+          return false;
         }
-        std::cerr << "[AiM Controller CH" << m_channel_id << " send()] Enqueued to m_aim_no_bank_buffer, size=" << m_aim_no_bank_buffer.size() << std::endl;
+        DEBUG_LOG(AiMController, m_logger, 
+                  "[AiMulator: Ctrl, CH{} send()] Enqueued to m_aim_no_bank_buffer, size={}", 
+                  m_channel_id, m_aim_no_bank_buffer.size());
       } else {
         throw std::runtime_error("Invalid request type!");
       }
@@ -208,14 +226,10 @@ class AiMController final : public IDRAMController, public Implementation {
 
       m_clk++;
 
-      if (m_aim_bank_buffer.size() > 0 || m_aim_no_bank_buffer.size() > 0 ||
-          pending_aim_bank.size() > 0 || pending_aim_no_bank.size() > 0) {
-        std::cerr << "[AiM Controller CH" << m_channel_id << " tick()] clk=" << m_clk
-                  << " aim_bank_buf=" << m_aim_bank_buffer.size()
-                  << " aim_no_bank_buf=" << m_aim_no_bank_buffer.size()
-                  << " pending_aim_bank=" << pending_aim_bank.size()
-                  << " pending_aim_no_bank=" << pending_aim_no_bank.size() << std::endl;
-      }
+      DEBUG_LOG(AiMController, m_logger, 
+                "[AiMulator: Ctrl, CH{} tick()] clk={} aim_bank_buf={} aim_no_bank_buf={} pending_aim_bank={} pending_aim_no_bank={}", 
+                m_channel_id, m_clk, m_aim_bank_buffer.size(), m_aim_no_bank_buffer.size(),
+                pending_aim_bank.size(), pending_aim_no_bank.size());
 
       // Update statistics
       // s_queue_len += m_read_buffer.size() + m_write_buffer.size() + m_priority_buffer.size() + pending_reads.size();
@@ -232,10 +246,9 @@ class AiMController final : public IDRAMController, public Implementation {
       ReqBuffer::iterator req_it;
       ReqBuffer* buffer = nullptr;
       bool request_found = schedule_request(req_it, buffer);
-      if (m_aim_bank_buffer.size() > 0 || m_aim_no_bank_buffer.size() > 0 ||
-          pending_aim_bank.size() > 0 || pending_aim_no_bank.size() > 0) {
-        std::cerr << "[AiM Controller CH" << m_channel_id << " tick()] request_found=" << request_found << std::endl;
-      }
+      
+      DEBUG_LOG(AiMController, m_logger, "[AiMulator: Ctrl, CH{} tick()] request_found={}",
+                m_channel_id, request_found);
 
       // 2.1 Take row policy action
       // m_rowpolicy->update(request_found, req_it);
@@ -255,11 +268,10 @@ class AiMController final : public IDRAMController, public Implementation {
           req_it->issue = m_clk - 1;
         }
 
-        std::cerr << "[AiM Controller CH" << m_channel_id << " tick()] ISSUING command=" << req_it->command
-                  << " final_command=" << req_it->final_command
-                  << " type_id=" << req_it->type_id
-                  << " is_aim=" << req_it->is_aim_req
-                  << " clk=" << m_clk << std::endl;
+        DEBUG_LOG(AiMController, m_logger, 
+                  "[AiMulator: Ctrl, CH{} tick()] ISSUING command={} final_command={} type_id={} is_aim={} clk={}", 
+                  m_channel_id, req_it->command, req_it->final_command, req_it->type_id, 
+                  req_it->is_aim_req, m_clk);
 
         m_dram->issue_command(req_it->command, req_it->addr_h);
         s_num_commands[req_it->command] += 1;
@@ -268,9 +280,9 @@ class AiMController final : public IDRAMController, public Implementation {
         if (req_it->command == req_it->final_command) {
           int final_cmd_exec_time = m_dram->m_command_latencies(req_it->command);
           req_it->depart = m_clk + final_cmd_exec_time;
-          std::cerr << "[AiM Controller CH" << m_channel_id << " tick()] Final command issued, type=" << req_it->type_id
-                    << " addr=0x" << std::hex << req_it->addr << std::dec
-                    << " depart=" << req_it->depart << std::endl;
+          DEBUG_LOG(AiMController, m_logger, 
+                    "[AiMulator: Ctrl, CH{} tick()] Final command issued, type={} addr=0x{:x} depart={}", 
+                    m_channel_id, req_it->type_id, req_it->addr, req_it->depart);
           // Route completed requests to appropriate pending queues
           // IMPORTANT: Check is_aim_req to avoid routing refresh/system requests
           // (which may have type_id values that collide with AiM types) to AiM pending queues
@@ -498,7 +510,6 @@ class AiMController final : public IDRAMController, public Implementation {
 
           if (req.callback) {
             // If the request comes from outside (e.g., processor), call its callback
-            std::cout << "[AiM Controller] callback request type: " << req.command << " addr: " << std::hex << req.addr << std::endl;
             req.callback(req);
           }
           // Finally, remove this request from the pending queue
@@ -512,7 +523,6 @@ class AiMController final : public IDRAMController, public Implementation {
         while (write_req_it != pending_writes.end()) {
           if (write_req_it->depart <= m_clk) {
             if(write_req_it->callback){
-              std::cout << "[AiM Controller] callback request type: " << write_req_it->command << " addr: " << std::hex << write_req_it->addr << std::endl;
               write_req_it->callback(*write_req_it);
             }
             write_req_it = pending_writes.erase(write_req_it); 
@@ -524,15 +534,15 @@ class AiMController final : public IDRAMController, public Implementation {
       // Serve the AiM bank commands
       if (pending_aim_bank.size()) {
         auto& req = pending_aim_bank.front();
-        std::cerr << "[AiM Controller CH" << m_channel_id << " serve_completed_reqs()] pending_aim_bank: type=" << req.type_id
-                  << " addr=0x" << std::hex << req.addr << std::dec
-                  << " depart=" << req.depart << " m_clk=" << m_clk
-                  << " has_callback=" << (req.callback ? 1 : 0) << std::endl;
+        DEBUG_LOG(AiMController, m_logger, 
+                  "[AiMulator: Ctrl, CH{} serve_completed_reqs()] pending_aim_bank: type={} addr=0x{:x} depart={} m_clk={} has_callback={}", 
+                  m_channel_id, req.type_id, req.addr, req.depart, m_clk, (req.callback ? 1 : 0));
         if (req.depart <= m_clk) {
           if (req.callback) {
+            DEBUG_LOG(AiMController, m_logger, 
+                      "[AiMulator: Ctrl, CH{}] callback request type: {} addr: 0x{:x}", 
+                      m_channel_id, req.command, req.addr);
             // If the request comes from outside (e.g., processor), call its callback
-            std::cerr << "[AiM Controller CH" << m_channel_id << "] callback request type: " << req.command << " addr: " << std::hex << req.addr << std::dec << std::endl;
-
             req.callback(req);
           }
           // Finally, remove this request from the pending queue
@@ -545,8 +555,10 @@ class AiMController final : public IDRAMController, public Implementation {
         auto& req = pending_aim_no_bank.front();
         if (req.depart <= m_clk) {
           if (req.callback) {
+            DEBUG_LOG(AiMController, m_logger, 
+                      "[AiM Controller] callback request type: {} addr: 0x{:x}", 
+                      req.command, req.addr);
             // If the request comes from outside (e.g., processor), call its callback
-            std::cerr << "[AiM Controller] callback request type: " << req.command << " addr: " << std::hex << req.addr << std::endl;
             req.callback(req);
           }
           // Finally, remove this request from the pending queue
@@ -602,35 +614,37 @@ class AiMController final : public IDRAMController, public Implementation {
           priority_req_it->command = m_dram->get_preq_command(priority_req_it->final_command, priority_req_it->addr_h);
           priority_scope = m_dram->m_command_action_scope(priority_req_it->command);
 
-          std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                    << "Priority buffer size=" << m_priority_buffer.size()
-                    << " final_cmd=" << priority_req_it->final_command
-                    << " preq_cmd=" << priority_req_it->command
-                    << " scope=" << priority_scope
-                    << " ready=" << m_dram->check_ready(priority_req_it->command, priority_req_it->addr_h)
-                    << " clk=" << m_clk << std::endl;
+          DEBUG_LOG(AiMController, m_logger, 
+                    "[AiMulator: Ctrl, CH{} schedule_request()] Priority buffer size={} final_cmd={} preq_cmd={} scope={} ready={} clk={}", 
+                    m_channel_id, m_priority_buffer.size(), priority_req_it->final_command,
+                    priority_req_it->command, priority_scope, 
+                    m_dram->check_ready(priority_req_it->command, priority_req_it->addr_h), m_clk);
 
           if (m_dram->check_ready(priority_req_it->command, priority_req_it->addr_h)) {
             // Priority request is ready, serve it
             request_found = true;
             req_it = priority_req_it;
             req_buffer = &m_priority_buffer;
-            std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                      << "Serving priority request!" << std::endl;
+            DEBUG_LOG(AiMController, m_logger,
+                      "[AiMulator: Ctrl, CH{} schedule_request()] Serving priority request!",
+                      m_channel_id);
           } else {
             // Priority request not ready
             // Channel scope (level 0) -> strict blocking, nothing else can proceed
-            std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                      << "Priority request NOT ready, checking if blocking..." << std::endl;
+            DEBUG_LOG(AiMController, m_logger,
+                      "[AiMulator: Ctrl, CH{} schedule_request()] Priority request NOT ready, checking if blocking...",
+                      m_channel_id);
             if (priority_scope == 0) {
-              std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                        << "Channel-scope priority -> BLOCKING all other requests" << std::endl;
+              DEBUG_LOG(AiMController, m_logger, 
+                        "[AiMulator: Ctrl, CH{} schedule_request()] Channel-scope priority -> BLOCKING all other requests",
+                        m_channel_id);
               return false;
             }
             // For other scopes (rank, bankgroup, bank), continue to check AiM buffers
             // AiM requests to different targets can proceed
-            std::cerr << "[AiM Controller CH" << m_channel_id << " schedule_request()] "
-                      << "Non-channel scope -> allowing AiM requests to different targets" << std::endl;
+            DEBUG_LOG(AiMController, m_logger,
+                      "[AiMulator: Ctrl, CH{} schedule_request()] Non-channel scope -> allowing AiM requests to different targets",
+                      m_channel_id);
           }
         }
 

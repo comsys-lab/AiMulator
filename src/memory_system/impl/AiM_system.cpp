@@ -4,7 +4,11 @@
 #include "addr_mapper/addr_mapper.h"
 #include "dram/AiM_dram.h"
 
+DECLARE_DEBUG_FLAG(AiMSystem)
+
 namespace Ramulator {
+
+ENABLE_DEBUG_FLAG(AiMSystem)
 
 class AiMSystem final : public IMemorySystem, public Implementation {
   RAMULATOR_REGISTER_IMPLEMENTATION(IMemorySystem, AiMSystem, "AiMSystem", "An AiM-based memory system.");
@@ -16,7 +20,6 @@ class AiMSystem final : public IMemorySystem, public Implementation {
       m_addr_mapper = create_child_ifce<IAddrMapper>();
       num_chs = m_dram->get_level_size("channel");
       s_num_reqs = std::vector<std::vector<int>>(num_chs, std::vector<int>(Request::Type::UNKNOWN, 0));
-      // callback = std::bind(&AiMDRAMSystem::receive, this, std::placeholders::_1);
       
       // Create memory controllers
       for (int i = 0; i < num_chs; i++) {
@@ -29,22 +32,32 @@ class AiMSystem final : public IMemorySystem, public Implementation {
         //     .name("CH_{}_total_num_{}_requests", i, str_type_name(req_type));
         // }
       }
+
+      auto existing_logger = spdlog::get("AiMSystem");
+      if (existing_logger) {
+        m_logger = existing_logger;
+      } else {
+        m_logger = Logging::create_logger("AiMSystem");
+      }
+      DEBUG_LOG(AiMSystem, m_logger, "AiM Memory System initialized!");
     };
 
     bool send(Request req) override {
       m_addr_mapper->apply(req);
       int ch_id = req.addr_h[0];
-      // std::cout << "[Ramulator (AiM Memory System)] ch_id: " << ch_id << std::endl;
+      DEBUG_LOG(AiMSystem, m_logger,
+                "[AiMulator: MemSystem] channel_id = {}",
+                ch_id);
       bool is_success = m_controllers[ch_id]->send(req);
       s_num_reqs[ch_id][req.type_id]++;
-      // std::cout << "[Ramulator (AiM Memory System)] is_succes? " << is_success << std::endl;
-      // for (int i = 0; i < num_chs; i++) {
-      //   if (is_success) { s_num_reqs[i][req.type_id]++; }
-      // }
+      DEBUG_LOG(AiMSystem, m_logger,
+                "[AiMulator: MemSystem] is send() success? = {}",
+                is_success);
       return is_success;
     };
 
-    bool send(std::vector<Request> req_vec) override {
+    /* Deprecated 
+      bool send(std::vector<Request> req_vec) override {
       // send requests within the req_vec to each channel
       std::vector<bool> is_success(req_vec.size(), false);
       bool is_all_success = true;
@@ -53,10 +66,6 @@ class AiMSystem final : public IMemorySystem, public Implementation {
         int ch_id = req_vec[i].addr_h[0];
         is_success[i] = m_controllers[ch_id]->send(req_vec[i]);
         if (is_success[i]) { s_num_reqs[ch_id][req_vec[i].type_id]++; }
-        /**
-         * @todo
-         * - Handle if the memory controller queue is full.
-         */
         // else {
         //   aim_reqs_waiting_queue =
         // }
@@ -64,6 +73,7 @@ class AiMSystem final : public IMemorySystem, public Implementation {
       }
       return is_all_success;
     };
+    */
     
     void tick() override {
       m_clk++;
@@ -136,9 +146,5 @@ class AiMSystem final : public IMemorySystem, public Implementation {
     int AiM_req_id = 0;
     int stalled_AiM_requests = 0;
     std::function<void(Request &)> callback;
-
-    // const SpecDef& get_supported_requests() override {
-    //   return m_dram->m_requests;
-    // };
 };
 }   // namespace Ramulator

@@ -10,6 +10,8 @@
 #include "base/type.h"
 #include "dram/spec.h"
 
+// DECLARE_DEBUG_FLAG()
+
 namespace Ramulator {
 
 class IDRAM;
