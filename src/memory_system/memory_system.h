@@ -44,6 +44,11 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
     };
 
     virtual void finalize_wrapper(const char* stats_dir, const char* timestamp) {
+      auto logger = spdlog::get("Ramulator::IMemorySystem");
+      if (!logger) {
+        logger = Logging::create_logger("IMemorySystem");
+      }
+
       std::string file_path(stats_dir);
       file_path.append("/aimulator_");
       file_path.append(timestamp);
@@ -63,9 +68,9 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
       if (output_file.is_open()) {
         output_file << emitter.c_str() << std::endl;
         output_file.close();
-        std::cout << "[Ramulator] Statistics saved to: " << file_path << std::endl;
+        logger->info("[Ramulator 2] Statistics saved to: {}", file_path);
       } else {
-        std::cerr << "[Ramulator] Error: Unable to open file for writing: " << file_path << std::endl;
+        logger->error("[Ramulator 2] Unable to open file for writing: {}", file_path);
       }
     }
 
@@ -77,7 +82,8 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
      * @return   false    Request is rejected by the memory system, maybe the memory controller is full?
      */
     virtual bool send(Request req) = 0;
-    virtual bool send(std::vector<Request> req_vec) = 0;
+    // Deprecated
+    // virtual bool send(std::vector<Request> req_vec) = 0;
 
     /**
      * @brief         Ticks the memory system

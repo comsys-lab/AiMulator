@@ -16,7 +16,7 @@ namespace Bank {
       case T::m_states["Opened"]:
         if (node->m_row_state.find(addr_h[T::m_levels["row"]]) != node->m_row_state.end()) { return cmd; }
         else { return T::m_commands["PRE"]; }
-      case T::m_states["Refreshing"]: return T::m_commands["ACT"];
+      case T::m_states["Refreshing"]: return cmd;
       default: {
         spdlog::error("[Preq::Bank] Invalid bank state for an RD/WR command!");
         std::exit(-1);
@@ -133,7 +133,7 @@ namespace Rank {
           break;
         // REFRESHING: Bank is refreshing - signal to caller to return cmd (not ready yet)
         case T::m_states["Refreshing"]:
-          return -1;
+          return cmd;
         // Any other state is a conflict
         default: return 0;
       }
@@ -238,8 +238,8 @@ namespace Channel {
           break;
         // This bank is closed. This is a valid, non-conflicting state.
         case T::m_states["Closed"]: break;
-        // REFRESHING: Bank is refreshing - signal to caller to return cmd (not ready yet)
-        case T::m_states["Refreshing"]: return -1;
+        // REFRESHING: Bank is refreshing
+        case T::m_states["Refreshing"]: return cmd;
         default:
           spdlog::error("[Preq::Channel] Invalid bank state encountered!");
           std::exit(-1);

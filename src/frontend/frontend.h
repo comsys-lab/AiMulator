@@ -45,6 +45,11 @@ class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
     };
 
     virtual void finalize_wrapper(const char* stats_dir, const char* timestamp) {
+      auto logger = spdlog::get("Ramulator::IFrontEnd");
+      if (!logger) {
+        logger = Logging::create_logger("IFrontEnd");
+      }
+
       std::string file_path(stats_dir);
       file_path.append("/aimulator_");
       file_path.append(timestamp);
@@ -53,6 +58,7 @@ class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
       for (auto component : m_components) {
         component->finalize();
       }
+
       YAML::Emitter emitter;
       emitter << YAML::BeginMap;
       m_impl->print_stats(emitter);
@@ -63,9 +69,9 @@ class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
       if (output_file.is_open()) {
         output_file << emitter.c_str() << std::endl;
         output_file.close();
-        std::cout << "[Ramulator] Statistics saved to: " << file_path << std::endl;
+        logger->info("[Ramulator 2] Statistics saved to: {}", file_path);
       } else {
-        std::cerr << "[Ramulator] Error: Unable to open file for writing: " << file_path << std::endl;
+        logger->error("[Ramulator 2] Unable to open file for writing: {}", file_path);
       }
     }
 

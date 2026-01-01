@@ -20,7 +20,7 @@ class LPDDR5 : public IDRAM, public Implementation {
       {"LPDDR5_32Gb_x16", {32<<10,  16, { 1, 1, 4, 4, 1<<17, 1<<10}}},
       // {"LPDDR5_AiM_32Gb", {32<<10,  16, {1, 1, 4, 4, 1<<17, 1<<10}}},
       // 64 GB AiM
-      {"16X_LPDDR5_AiM_32Gb", {32<<10, 16, {16, 1, 4, 4, 1<<17, 1<<10}}}
+      {"16X_LPDDR5_AiM_32Gb_x16", {32<<10, 16, {16, 1, 4, 4, 1<<17, 1<<10}}}
     };
 
     inline static const std::map<std::string, std::vector<int>> timing_presets = {
@@ -272,6 +272,7 @@ class LPDDR5 : public IDRAM, public Implementation {
         if (future_action.clk == m_clk) {
           int channel_id = future_action.addr_h[m_levels["channel"]];
           int rank_id = future_action.addr_h[m_levels["rank"]];
+
           DEBUG_LOG(LPDDR5, m_logger,
                     "[AiMulator: LPDDR5 tick()] EXECUTING future action: cmd={}, channel={}, rank={}, cycle={}",
                     m_commands(future_action), channel_id, rank_id, m_clk);
@@ -298,7 +299,7 @@ class LPDDR5 : public IDRAM, public Implementation {
       
       create_nodes();
 
-      auto existing logger = spdlog::get("LPDDR5");
+      auto existing_logger = spdlog::get("LPDDR5");
       if (existing_logger) {
         m_logger = existing_logger;
       } else {
@@ -350,8 +351,8 @@ class LPDDR5 : public IDRAM, public Implementation {
         Clk_t refab_end_cycle = m_clk + m_timing_vals("nRFCab") - 1;
         
         DEBUG_LOG(LPDDR5, m_logger,
-                  "[AiMulator: LPDDR5 issue_command()] REFab issued at cycle={}. Scheduling REFab_end for cycle={}, (nRFCAab={}), channel={}, rank={}",
-                  m_clk, refab_end_cycle, m_timing_vals("nRFCab"), addr_h[m_levels["channel"], addr_h[m_levels["rank"]]]);
+                  "[AiMulator: LPDDR5 issue_command()] REFab issued at cycle={}. Scheduling REFab_end for cycle={}, (nRFCab={}), channel={}, rank={}",
+                  m_clk, refab_end_cycle, m_timing_vals("nRFCab"), addr_h[m_levels["channel"]], addr_h[m_levels["rank"]]);
         
         m_future_actions.push_back({m_commands["REFab_end"], addr_h, m_clk + m_timing_vals("nRFCab") - 1});
 

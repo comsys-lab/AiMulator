@@ -218,11 +218,6 @@ class AiMController final : public IDRAMController, public Implementation {
     }
 
     void tick() override {
-      // bool does_exist_any_req = m_read_buffer.size() + m_write_buffer.size() + m_aim_bank_buffer.size() + m_aim_no_bank_buffer.size();
-      // if (!does_exist_any_req) {
-      //   std::cout << "[AiMulator (Controller)] No memory request sent!" << std::endl;
-      //   return;
-      // }
 
       m_clk++;
 
@@ -315,8 +310,8 @@ class AiMController final : public IDRAMController, public Implementation {
               // case Request::Type::MAC_4BK_INTER_BG:
               // case Request::Type::AF_4BK_INTER_BG:
               default:
-                // Unknown AiM request type - should not happen
-                break;
+                spdlog::error("Not defined request type!");
+                std::exit(-1);
             }
           } else {
             // Non-AiM requests (Read, Write, Refresh, etc.)

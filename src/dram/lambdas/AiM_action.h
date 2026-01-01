@@ -215,6 +215,25 @@ namespace Channel {
       }
     }
   };
+
+  template <class T>
+  void REFab_end(typename T::Node* node, int cmd, const AddrHierarchy_t& addr_h, Clk_t clk) {
+    if constexpr (T::m_levels["bankgroup"] - T::m_levels["channel"] == 1) {
+      for (auto bg : node->m_child_nodes) {
+        for (auto bank : bg->m_child_nodes) {
+          bank->m_state = T::m_states["Closed"];
+        }
+      }
+    } else if constexpr (T::m_levels["bankgroup"] - T::m_levels["channel"] = 2) {
+      for (auto rank : node->m_child_nodes) {
+        for (auto bg : rank->m_child_nodes) {
+          for (auto bank : bg->m_child_nodes) {
+            bank->m_state = T::m_states["Closed"];
+          }
+        }
+      }
+    }
+  };
   
   // AiM
   template <class T>

@@ -8,19 +8,21 @@ project(
 
 #### Prompt the build type ####
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug or Release)" FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 endif()
 message("Configuring ${CMAKE_PROJECT_NAME} ${CMAKE_PROJECT_Version}...")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Debug-specific flags
-# Updated: Added -fno-inline and -fno-omit-frame-pointer to help GDB unwinding
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -ggdb -fno-inline -fno-omit-frame-pointer -DRAMULATOR_DEBUG")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -ggdb -fno-inline -fno-omit-frame-pointer")
   message(STATUS "Debug flags: ${CMAKE_CXX_FLAGS_DEBUG}")
+  message(STATUS "Debug logging: ENABLED (RAMULATOR_DEBUG)")
 else()
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -g")
   message(STATUS "Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
+  message(STATUS "Debug logging: DISABLED")
 endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -83,14 +85,13 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 add_library(ramulator SHARED)
 set_target_properties(ramulator PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY  ${PROJECT_SOURCE_DIR}
-  OUTPUT_NAME "ramulator2"
+  OUTPUT_NAME "ramulator2$<$<CONFIG:Debug>:-debug>"
 )
 
-# Set compile options based on build type
+# Set compile definitions based on build type
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # Note: Flags are already set in CMAKE_CXX_FLAGS_DEBUG above,
-  # but ensuring definitions here is good practice.
   target_compile_definitions(ramulator PRIVATE RAMULATOR_DEBUG)
+  message(STATUS "Adding RAMULATOR_DEBUG definition to ramulator library")
 endif()
 
 target_link_libraries(

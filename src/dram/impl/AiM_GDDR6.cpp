@@ -48,7 +48,7 @@ class GDDR6 : public IDRAM, public Implementation {
       "ACT", 
       "PREA", "PRE",
       "RD",  "WR",  "RDA",  "WRA",
-      "REFab", "REFpb", "REFp2b",
+      "REFab", "REFab_end", "REFpb", "REFp2b",
       // Single-bank AiM commands leverage the conventional RD, WR, etc.
       "MACSB", "AFSB", "RDCP", "WRCP",
       // Multi-bank AiM commands
@@ -65,7 +65,7 @@ class GDDR6 : public IDRAM, public Implementation {
         {"ACT", "row"},
         {"PREA", "channel"}, {"PRE", "bank"},
         {"RD", "column"}, {"WR", "column"}, {"RDA", "column"}, {"WRA", "column"},
-        {"REFab", "channel"}, {"REFp2b", "channel"}, {"REFpb", "bank"},
+        {"REFab", "channel"}, {"REFab_end", "channel"}, {"REFp2b", "channel"}, {"REFpb", "bank"},
         // Single-bank AiM commands
         {"MACSB", "column"}, {"AFSB", "column"}, {"RDCP", "column"}, {"WRCP", "column"},
         // Multi-bank AiM commands
@@ -87,7 +87,7 @@ class GDDR6 : public IDRAM, public Implementation {
         {"ACT", "row"},
         {"PREA", "channel"}, {"PRE", "bank"},
         {"RD", "column"}, {"WR", "column"}, {"RDA", "column"}, {"WRA", "column"},
-        {"REFab", "channel"}, {"REFp2b", "channel"}, {"REFpb", "bank"},
+        {"REFab", "channel"}, {"REFab_end", "channel"}, {"REFp2b", "channel"}, {"REFpb", "bank"},
         // Single-bank AiM commands
         {"MACSB", "column"}, {"AFSB", "column"}, {"RDCP", "column"}, {"WRCP", "column"},
         // 4-bank commands for intra-bank group
@@ -116,6 +116,7 @@ class GDDR6 : public IDRAM, public Implementation {
         {"RDA",            {false,  true,    true,    false}},
         {"WRA",            {false,  true,    true,    false}},
         {"REFab",          {false,  false,   false,   true }}, //double check
+        {"REFab_end",      {false,  true,    false,   false}},
         {"REFpb",          {false,  false,   false,   true }},
         {"REFp2b",         {false,  false,   false,   true }},
         // Single-bank AiM commands
@@ -238,7 +239,28 @@ class GDDR6 : public IDRAM, public Implementation {
     FuncMatrix<RowopenFunc_t<Node>> m_rowopens;
 
   public:
-    void tick() override { m_clk++; };
+    void tick() override {
+      m_clk++;
+
+      // Process future actions (e.g., REFab_end after nRFCab cycles)
+      for (int i = m_future_actions.size() - 1; i >= 0; i--) {
+        auto& future_action = m_future_actions[i];
+        if (future_action.clk == m_clk) {
+          int channel_id = future_action.addr_h[m_levels["channel"]];
+
+          DEBUG_LOG(GDDR6, m_logger,
+                    "[AiMulator: GDDR6 tick()] EXECUTING future action: cmd={}, channel={}, cycle={}",
+                    m_commands(future_action), channel_id, m_clk);
+
+          m_channels[channel_id]->update_states(future_action.cmd, future_action.addr_h, m_clk);
+          m_future_actions.erase(m_future_actions.begin() + i);
+          
+          DEBUG_LOG(GDDR6, m_logger,
+                    "[AiMulator: GDDR6 tick()] Future action executed and removed. Remaining: {}",
+                    m_future_actions.size());
+        }
+      }
+    };
 
     void init() override {
       RAMULATOR_DECLARE_SPECS();
@@ -251,6 +273,14 @@ class GDDR6 : public IDRAM, public Implementation {
       set_rowopens();
       
       create_nodes();
+
+      auto existing_logger = spdlog::get("GDDR6");
+      if (existing_logger) {
+        m_logger = existing_logger;
+      } else {
+        m_logger = Logging::create_logger("GDDR6");
+      }
+      DEBUG_LOG(GDDR6, m_logger, "GDDR6 initialized!");
     };
 
     void issue_command(int command, const AddrHierarchy_t& addr_h) override {
@@ -291,6 +321,21 @@ class GDDR6 : public IDRAM, public Implementation {
       case m_commands["ACT"]: {
         int bank_id = addr_h[m_levels["bank"]];
         m_open_rows[channel_id] |= (uint16_t)(1 << bank_id);
+        break;
+      }
+      case m_commands["REFab"]: {
+        // Schedule REFab_end to execute after nRFCab cycles
+        Clk_t refab_end_cycle = m_clk + m_timing_vals("nRFC") - 1;
+        
+        DEBUG_LOG(LPDDR5, m_logger,
+                  "[AiMulator: GDDR6 issue_command()] REFab issued at cycle={}. Scheduling REFab_end for cycle={}, (nRFC={}), channel={}",
+                  m_clk, refab_end_cycle, m_timing_vals("nRFC"), addr_h[m_levels["channel"]]);
+        
+        m_future_actions.push_back({m_commands["REFab_end"], addr_h, m_clk + m_timing_vals("nRFC") - 1});
+
+        DEBUG_LOG(LPDDR5, m_logger,
+                  "[AiMulator: GDDR6 issue_command()] Future actions count after REFab: {}",
+                  m_future_actions.size());
         break;
       }
       default:
@@ -353,8 +398,7 @@ class GDDR6 : public IDRAM, public Implementation {
       }
 
       // Sanity check: is the calculated chip density the same as the provided one?
-      size_t _density = size_t(m_organization.count[m_levels["channel"]]) *
-                        size_t(m_organization.count[m_levels["bankgroup"]]) *
+      size_t _density = size_t(m_organization.count[m_levels["bankgroup"]]) *
                         size_t(m_organization.count[m_levels["bank"]]) *
                         size_t(m_organization.count[m_levels["row"]]) *
                         size_t(m_organization.count[m_levels["column"]]) *
@@ -441,10 +485,10 @@ class GDDR6 : public IDRAM, public Implementation {
       // Refresh timings
       // tRFC table (unit is nanosecond!)
       constexpr int tRFC_TABLE[3][4] = {
-      //  4Gb   8Gb  16Gb
-        { 260,  360,  550}, // Normal refresh (tRFC1)
-        { 160,  260,  350}, // FGR 2x (tRFC2)
-        { 110,  160,  260}, // FGR 4x (tRFC4)
+      //  4Gb   8Gb  16Gb  32Gb
+        { 260,  360,  550,  740}, // Normal refresh (tRFC1)
+        { 160,  260,  350,  540}, // FGR 2x (tRFC2)
+        { 110,  160,  260,  360}, // FGR 4x (tRFC4)
       };
 
       // tREFI(base) table (unit is nanosecond!)
@@ -454,6 +498,7 @@ class GDDR6 : public IDRAM, public Implementation {
           case 4096:  return 0;
           case 8192:  return 1;
           case 16384: return 2;
+          case 32768: return 3;
           default:    return -1;
         }
       }(m_organization.density);
@@ -586,7 +631,7 @@ class GDDR6 : public IDRAM, public Implementation {
         {.level = "channel", .preceding = {"PRE", "PRE4_BG", "PREA"}, .following = {"REFab"}, .latency = V("nRP")},
         {.level = "channel", .preceding = {"RDA"}, .following = {"REFab"}, .latency = V("nRP")+V("nRTP")},
         {.level = "channel", .preceding = {"WRA"}, .following = {"REFab"}, .latency = V("nCWL")+V("nBL")+V("nWR")+V("nRP")},
-        {.level = "channel", .preceding = {"REFab"}, .following = {"ACT", "ACT4_BG", "ACT16"}, .latency = V("nRFC")},
+        {.level = "channel", .preceding = {"REFab"}, .following = {"REFab", "ACT", "ACT4_BG", "ACT16", "PRE", "PRE4_BG", "PREA"}, .latency = V("nRFC")},
         /************************************************************
          * RAS -> REFp2b
          *************************************************************/
@@ -670,6 +715,7 @@ class GDDR6 : public IDRAM, public Implementation {
       // Channel Actions 
       m_actions[m_levels["channel"]][m_commands["PREA"]]  = Lambdas::Action::Channel::PREab<GDDR6>;
       m_actions[m_levels["channel"]][m_commands["REFab"]] = Lambdas::Action::Channel::REFab<GDDR6>;
+      m_actions[m_levels["channel"]][m_commands["REFab_end"]] = Lambdas::Action::Channel::REFab_end<GDDR6>;
       // Channel actions; AiM
       m_actions[m_levels["channel"]][m_commands["ACT16"]] = Lambdas::Action::Channel::ACTab<GDDR6>;
 

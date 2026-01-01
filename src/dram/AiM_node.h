@@ -10,7 +10,7 @@
 #include "base/type.h"
 #include "dram/spec.h"
 
-// DECLARE_DEBUG_FLAG()
+DECLARE_DEBUG_FLAG(DRAMNode)
 
 namespace Ramulator {
 
@@ -202,18 +202,11 @@ struct DRAMNodeBase {
 
     if (action_scope != -1 && m_level >= action_scope) {
       // FAN-OUT RECURSION:
-      // This is a multi-bank command and we are at or below its action scope.
-      // e.g., We are a BankGroup processing ACT4_BG, so we must update all our Banks.
-      // Or we are a Bank processing ACT4_BG (called from our parent BG), so we must update our Rows.
-      // Therefore, broadcast the update to all children.
       for (auto child : m_child_nodes) {
         child->update_timing(command, addr_h, clk);
       }
     } else {
       // SINGLE-PATH RECURSION:
-      // This is a standard single-address command (like RD/WR), or we are
-      // at a level above a multi-bank command's action scope.
-      // In either case, we follow the single path specified by the address.
       int child_id = addr_h[m_level + 1];
       if (child_id < 0 || child_id >= m_child_nodes.size()) {
         spdlog::error("[update_timing] Invalid child_id {} at level {}. child_nodes size: {}", 
@@ -278,22 +271,16 @@ struct DRAMNodeBase {
 
     if (m_level == action_scope) {
       // FAN-OUT RECURSION:
-      // We are at the level where this command becomes a group action.
-      // e.g., We are a 'BankGroup' node and the command is 'ACT4_BG'.
-      // The command is ready only if it is ready for ALL children.
       bool all_children_ready = true;
       for (auto child : m_child_nodes) {
         if (!child->check_ready(command, addr_h, clk)) {
           all_children_ready = false;
-          break; // Optimization: one failure is enough to make the whole group not ready.
+          break;
         }
       }
       return all_children_ready;
     } else {
       // SINGLE-PATH RECURSION:
-      // This is either a standard command (like RD/WR/ACT) or we are at a level
-      // above the command's action scope (e.g., at the Channel for an ACT4_BG).
-      // In either case, we follow the single path specified by the address.
       int child_id = addr_h[m_level + 1];
       if (child_id < 0 || child_id >= m_child_nodes.size()) {
         spdlog::error("[check_ready] Invalid child_id {} at level {}. child_nodes size: {}", 
