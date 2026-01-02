@@ -85,7 +85,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 add_library(ramulator SHARED)
 set_target_properties(ramulator PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY  ${PROJECT_SOURCE_DIR}
-  OUTPUT_NAME "ramulator2$<$<CONFIG:Debug>:-debug>"
+  OUTPUT_NAME "aimulator$<$<CONFIG:Debug>:-debug>"
 )
 
 # Set compile definitions based on build type
@@ -111,7 +111,7 @@ target_link_libraries(
 set_target_properties(
   ramulator-exe
   PROPERTIES 
-  OUTPUT_NAME ramulator2
+  OUTPUT_NAME aimulator
 )
 
 add_subdirectory(src)
