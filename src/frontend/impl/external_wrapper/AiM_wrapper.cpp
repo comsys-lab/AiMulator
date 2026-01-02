@@ -7,7 +7,11 @@
 #include "base/exception.h"
 #include "addr_mapper/addr_mapper.h"
 
+DECLARE_DEBUG_FLAG(AiMWrapper)
+
 namespace Ramulator {
+
+ENABLE_DEBUG_FLAG(AiMWrapper)
 
 namespace fs = std::filesystem;
 
@@ -17,6 +21,12 @@ class AiMWrapper : public IFrontEnd, public Implementation {
   public:
     void init() override {
       auto existing_logger = spdlog::get("AiMWrapper");
+      if (existing_logger) {
+        m_logger = existing_logger;
+      } else {
+        m_logger = Logging::create_logger("AiMWrapper");
+      }
+      DEBUG_LOG(AiMWrapper, m_logger, "AiM Wrapper initialized!");
     };
 
     bool receive_external_requests(int req_type_id, Addr_t addr, int source_id, std::function<void(Request&)> callback) {
@@ -25,13 +35,13 @@ class AiMWrapper : public IFrontEnd, public Implementation {
     };
 
     bool receive_external_aim_requests(int req_type_id, Addr_t addr, std::function<void(Request&)> callback) {
-      // std::cout << "[Ramulator (AiM Wrapper)] request received!" << std::endl;
-      // std::cout << "[Ramulator (AiM Wrapper)] req_type_id: " << req_type_id << "," << "[Ramulator (AiM Wrapper)] addr: " << addr << std::endl;
+      DEBUG_LOG(AiMWrapper, m_logger
+                "[AiMulator: Wrapper] Request type={} received!",
+                req_type_id);
 
       int aim_num_banks = -1;
       bool is_aim = false;
       
-      // Lazy initialization of address mapping information on first call
       switch (req_type_id) {
         case Request::Type::MAC_SBK:
         case Request::Type::AF_SBK:
@@ -63,7 +73,6 @@ class AiMWrapper : public IFrontEnd, public Implementation {
           break;
       }
       
-      // Set is_aim flag based on number of banks
       switch (aim_num_banks) {
         case -1:
           is_aim = false;
@@ -80,12 +89,14 @@ class AiMWrapper : public IFrontEnd, public Implementation {
       }
       
       Request req = Request(is_aim, req_type_id, addr, aim_num_banks, callback);
-      // std::cout << "[Ramulator (AiM Wrapper)] Ramulator request created!" << std::endl;
       return m_memory_system->send(req);
     };
 
     void tick() override {};
   
+  private:
+    Logger_t m_logger;
+
   private:
     bool is_finished() override { return true; };
 };

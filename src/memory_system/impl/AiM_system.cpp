@@ -56,24 +56,7 @@ class AiMSystem final : public IMemorySystem, public Implementation {
       return is_success;
     };
 
-    /* Deprecated 
-      bool send(std::vector<Request> req_vec) override {
-      // send requests within the req_vec to each channel
-      std::vector<bool> is_success(req_vec.size(), false);
-      bool is_all_success = true;
-      for (int i = 0; i < req_vec.size(); i++) {
-        m_addr_mapper->apply(req_vec[i]);
-        int ch_id = req_vec[i].addr_h[0];
-        is_success[i] = m_controllers[ch_id]->send(req_vec[i]);
-        if (is_success[i]) { s_num_reqs[ch_id][req_vec[i].type_id]++; }
-        // else {
-        //   aim_reqs_waiting_queue =
-        // }
-        is_all_success &= is_success[i];
-      }
-      return is_all_success;
-    };
-    */
+    bool send(std::vector<Request> req_vec) override {};
     
     void tick() override {
       m_clk++;
@@ -133,7 +116,7 @@ class AiMSystem final : public IMemorySystem, public Implementation {
       emitter << YAML::Newline;
     }
     
-    protected:
+  protected:
     Clk_t m_clk = 0;
     IDRAM* m_dram;
     uint16_t num_chs;

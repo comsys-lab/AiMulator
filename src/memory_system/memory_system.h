@@ -82,8 +82,7 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
      * @return   false    Request is rejected by the memory system, maybe the memory controller is full?
      */
     virtual bool send(Request req) = 0;
-    // Deprecated
-    // virtual bool send(std::vector<Request> req_vec) = 0;
+    virtual bool send(std::vector<Request> req_vec) = 0;
 
     /**
      * @brief         Ticks the memory system
