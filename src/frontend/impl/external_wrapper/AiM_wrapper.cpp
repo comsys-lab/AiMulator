@@ -35,7 +35,7 @@ class AiMWrapper : public IFrontEnd, public Implementation {
     };
 
     bool receive_external_aim_requests(int req_type_id, Addr_t addr, std::function<void(Request&)> callback) {
-      DEBUG_LOG(AiMWrapper, m_logger
+      DEBUG_LOG(AiMWrapper, m_logger,
                 "[AiMulator: Wrapper] Request type={} received!",
                 req_type_id);
 
