@@ -274,12 +274,9 @@ class GDDR6 : public IDRAM, public Implementation {
       
       create_nodes();
 
-      auto existing_logger = spdlog::get("GDDR6");
-      if (existing_logger) {
-        m_logger = existing_logger;
-      } else {
-        m_logger = Logging::create_logger("GDDR6");
-      }
+      auto existing_logger = Logging::get("GDDR6");
+      if (existing_logger) { m_logger = existing_logger; }
+      else { m_logger = Logging::create_logger("GDDR6"); }
       DEBUG_LOG(GDDR6, m_logger, "GDDR6 initialized!");
     };
 

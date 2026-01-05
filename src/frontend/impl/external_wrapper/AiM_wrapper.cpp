@@ -20,12 +20,9 @@ class AiMWrapper : public IFrontEnd, public Implementation {
 
   public:
     void init() override {
-      auto existing_logger = spdlog::get("AiMWrapper");
-      if (existing_logger) {
-        m_logger = existing_logger;
-      } else {
-        m_logger = Logging::create_logger("AiMWrapper");
-      }
+      auto existing_logger = Logging::get("AiMWrapper");
+      if (existing_logger) { m_logger = existing_logger; }
+      else { m_logger = Logging::create_logger("AiMWrapper"); }
       DEBUG_LOG(AiMWrapper, m_logger, "AiM Wrapper initialized!");
     };
 

@@ -20,25 +20,29 @@ class AiMSystem final : public IMemorySystem, public Implementation {
       m_addr_mapper = create_child_ifce<IAddrMapper>();
       num_chs = m_dram->get_level_size("channel");
       s_num_reqs = std::vector<std::vector<int>>(num_chs, std::vector<int>(Request::Type::UNKNOWN, 0));
-      
+      s_num_rejected_reqs = std::vector<int>(num_chs, 0);
+
       // Create memory controllers
       for (int i = 0; i < num_chs; i++) {
         IDRAMController* controller = create_child_ifce<IDRAMController>();
         controller->m_impl->set_id(fmt::format("Channel {}", i));
         controller->m_channel_id = i;
         m_controllers.push_back(controller);
-        // for (int req_type = 0; req_type < Request::Type::UNKNOWN; req_type++) {
-        //   register_stat(s_num_reqs[i][req_type])
-        //     .name("CH_{}_total_num_{}_requests", i, str_type_name(req_type));
-        // }
+
+        for (int req_type = 0; req_type < Request::Type::UNKNOWN; req_type++) {
+          register_stat(s_num_reqs[i][req_type])
+            .name(fmt::format("CH{}_num_{}_reqs", i, str_type_name(req_type)));
+        }
+        register_stat(s_num_rejected_reqs[i])
+          .name(fmt::format("CH{}_num_rejected_reqs", i));
       }
 
-      auto existing_logger = spdlog::get("AiMSystem");
-      if (existing_logger) {
-        m_logger = existing_logger;
-      } else {
-        m_logger = Logging::create_logger("AiMSystem");
-      }
+      // Register total simulation cycles
+      register_stat(s_total_cycles).name("total_simulation_cycles");
+
+      auto existing_logger = Logging::get("AiMSystem");
+      if (existing_logger) { m_logger = existing_logger; }
+      else { m_logger = Logging::create_logger("AiMSystem"); }
       DEBUG_LOG(AiMSystem, m_logger, "AiM Memory System initialized!");
     };
 
@@ -49,7 +53,8 @@ class AiMSystem final : public IMemorySystem, public Implementation {
                 "[AiMulator: MemSystem] channel_id = {}",
                 ch_id);
       bool is_success = m_controllers[ch_id]->send(req);
-      s_num_reqs[ch_id][req.type_id]++;
+      if (is_success) { s_num_reqs[ch_id][req.type_id]++; }
+      else { s_num_rejected_reqs[ch_id]++; }
       DEBUG_LOG(AiMSystem, m_logger,
                 "[AiMulator: MemSystem] is send() success? = {}",
                 is_success);
@@ -60,6 +65,7 @@ class AiMSystem final : public IMemorySystem, public Implementation {
     
     void tick() override {
       m_clk++;
+      s_total_cycles++;
       m_dram->tick();
       for (auto controller : m_controllers) {
         controller->tick();
@@ -78,25 +84,39 @@ class AiMSystem final : public IMemorySystem, public Implementation {
         "WR_GB", "WR_MAC", "WR_BIAS", "RD_MAC", "RD_AF"
       };
 
+      const auto& registry = m_stats.registry();
+
       emitter << YAML::Key << "AiMSystem_Stats";
       emitter << YAML::Value << YAML::BeginMap;
 
+      // Total simulation cycles
+      auto cycles_it = registry.find("total_simulation_cycles");
+      if (cycles_it != registry.end()) {
+        cycles_it->second->emit_to(emitter);
+      }
+
+      // Per-channel statistics
       for (int i = 0; i < num_chs; i++) {
-        emitter << YAML::Key << fmt::format("Channel_{}_Requests", i);
+        emitter << YAML::Key << fmt::format("Channel_{}", i);
         emitter << YAML::Value << YAML::BeginMap;
 
-        std::vector<std::string> ordered_keys;
+        // Request counts by type
+        emitter << YAML::Key << "Requests";
+        emitter << YAML::Value << YAML::BeginMap;
         for (int j = 0; j < Request::Type::UNKNOWN; j++) {
-          std::string name = fmt::format("CH_{}_total_num_{}_requests", i, req_type_name[j]);
-          ordered_keys.push_back(name);
-        }
-        const auto& registry = m_stats.registry();
-
-        for (const auto& key : ordered_keys) {
-          auto it = registry.find(key);
+          std::string name = fmt::format("CH{}_num_{}_reqs", i, req_type_name[j]);
+          auto it = registry.find(name);
           if (it != registry.end()) {
             it->second->emit_to(emitter);
           }
+        }
+        emitter << YAML::EndMap;
+
+        // Rejected requests
+        std::string rejected_key = fmt::format("CH{}_num_rejected_reqs", i);
+        auto rejected_it = registry.find(rejected_key);
+        if (rejected_it != registry.end()) {
+          rejected_it->second->emit_to(emitter);
         }
 
         emitter << YAML::EndMap;
@@ -105,7 +125,6 @@ class AiMSystem final : public IMemorySystem, public Implementation {
       // Print all my children
       for (auto child_impl : m_children) {
         if (child_impl->has_stats()) {
-          // TODO: Is this a bug in yaml-cpp that I have to emit NewLine twice?
           emitter << YAML::Newline;
           emitter << YAML::Newline;
         }
@@ -125,9 +144,11 @@ class AiMSystem final : public IMemorySystem, public Implementation {
     Logger_t m_logger;
     std::queue<Request> request_queue;
     std::queue<Request> aim_reqs_waiting_queue;
-    std::vector<std::vector<int>> s_num_reqs;
-    int AiM_req_id = 0;
-    int stalled_AiM_requests = 0;
     std::function<void(Request &)> callback;
+
+    // Statistics
+    std::vector<std::vector<int>> s_num_reqs;       // [channel][type] -> count
+    std::vector<int> s_num_rejected_reqs;           // [channel] -> rejected count
+    int s_total_cycles = 0;
 };
 }   // namespace Ramulator

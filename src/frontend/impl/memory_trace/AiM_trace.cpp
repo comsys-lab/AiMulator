@@ -24,10 +24,9 @@ class AiMPacketTrace : public IFrontEnd, public Implementation {
       std::string trace_path_str = param<std::string>("path").desc("Path to the read write trace file.").required();
       m_clock_ratio = param<uint>("clock_ratio").required();
       m_addr_mapper = create_child_ifce<IAddrMapper>();
-      auto existing_logger = spdlog::get("AiMPacketTrace");
-      if (existing_logger) {
-        m_logger = existing_logger;
-      } else {
+      auto existing_logger = Logging::get("AiMPacketTrace");
+      if (existing_logger) { m_logger = existing_logger; }
+      else {
         m_logger = Logging::create_logger("AiMPacketTrace");
         m_logger->info("Loading trace file {} ...", trace_path_str);
         init_trace(trace_path_str);

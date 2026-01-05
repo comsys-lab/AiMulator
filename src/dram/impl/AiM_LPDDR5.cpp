@@ -299,12 +299,9 @@ class LPDDR5 : public IDRAM, public Implementation {
       
       create_nodes();
 
-      auto existing_logger = spdlog::get("LPDDR5");
-      if (existing_logger) {
-        m_logger = existing_logger;
-      } else {
-        m_logger = Logging::create_logger("LPDDR5");
-      }
+      auto existing_logger = Logging::get("LPDDR5");
+      if (existing_logger) { m_logger = existing_logger; }
+      else { m_logger = Logging::create_logger("LPDDR5"); }
       DEBUG_LOG(LPDDR5, m_logger, "LPDDR5 initialized!");
     };
 

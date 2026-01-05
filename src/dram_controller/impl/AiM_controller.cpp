@@ -38,12 +38,9 @@ class AiMController final : public IDRAMController, public Implementation {
       m_dram = memory_system->get_ifce<IDRAM>();
       m_bank_addr_idx = m_dram->m_levels("bank");
       m_priority_buffer.max_size = 512 * 3 + 32;
-      auto existing_logger = spdlog::get("AiMController[" + std::to_string(m_channel_id) + "]");
-      if (existing_logger) {
-        m_logger = existing_logger;
-      } else {
-        m_logger = Logging::create_logger("AiMController[" + std::to_string(m_channel_id) + "]");
-      }
+      auto existing_logger = Logging::get("AiMController[" + std::to_string(m_channel_id) + "]");
+      if (existing_logger) { m_logger = existing_logger; }
+      else { m_logger = Logging::create_logger("AiMController[" + std::to_string(m_channel_id) + "]"); }
 
       DEBUG_LOG(AiMController, m_logger, "AiM Controller initialized for channel {}!", m_channel_id);
       // m_num_cores = frontend->get_num_cores();
@@ -51,24 +48,24 @@ class AiMController final : public IDRAMController, public Implementation {
       // s_read_row_misses_per_core.resize(m_num_cores, 0);
       // s_read_row_conflicts_per_core.resize(m_num_cores, 0);
 
-      // for (const auto type : {Request::Type::Read, Request::Type::Write}) {
-      //   s_num_RW_cycles[type] = 0;
-      //   register_stat(s_num_RW_cycles[type])
-      //     .name(fmt::format("CH{}_{}_cycles", m_channel_id, str_type_name(type)));
-      // }
+      for (const auto type : {Request::Type::Read, Request::Type::Write}) {
+        s_num_RW_cycles[type] = 0;
+        register_stat(s_num_RW_cycles[type])
+          .name(fmt::format("CH{}_{}_cycles", m_channel_id, str_type_name(type)));
+      }
       for (const auto type : {Request::Type::WR_GB, Request::Type::WR_MAC, Request::Type::WR_BIAS,
                               Request::Type::RD_MAC, Request::Type::RD_AF}) {
         s_num_AiM_no_bank_cycles[type] = 0;
-        // register_stat(s_num_AiM_no_bank_cycles[type])
-        //   .name(fmt::format("CH{}_AiM_{}_cycles", m_channel_id, str_type_name(type)));
+        register_stat(s_num_AiM_no_bank_cycles[type])
+          .name(fmt::format("CH{}_AiM_{}_cycles", m_channel_id, str_type_name(type)));
       }
       for (const auto type : {Request::Type::MAC_SBK, Request::Type::AF_SBK, Request::Type::COPY_BKGB, Request::Type::COPY_GBBK,
                               Request::Type::MAC_4BK_INTRA_BG, Request::Type::AF_4BK_INTRA_BG, Request::Type::EWMUL, Request::Type::EWADD,
                               Request::Type::MAC_ABK, Request::Type::AF_ABK, Request::Type::WR_AFLUT, Request::Type::WR_BK}) {
         // Request::Type::MAC_4BK_INTER_BG, Request::Type::AF_4BK_INTER_BG,
         s_num_AiM_bank_cycles[type] = 0;
-        // register_stat(s_num_AiM_bank_cycles[type])
-        //   .name(fmt::format("CH{}_AiM_{}_cycles", m_channel_id, str_type_name(type)));
+        register_stat(s_num_AiM_bank_cycles[type])
+          .name(fmt::format("CH{}_AiM_{}_cycles", m_channel_id, str_type_name(type)));
       }
 
       // for (int type = Request::Type::MAC_SBK; type < Request::Type::WR_GB; type++) {
@@ -89,10 +86,14 @@ class AiMController final : public IDRAMController, public Implementation {
 
       register_stat(s_num_idle_cycles)
         .name(fmt::format("CH{}_idle_cycles", m_channel_id));
+      register_stat(s_num_stall_cycles)
+        .name(fmt::format("CH{}_stall_cycles", m_channel_id));
       register_stat(s_num_active_cycles)
         .name(fmt::format("CH{}_active_cycles", m_channel_id));
       register_stat(s_num_precharged_cycles)
         .name(fmt::format("CH{}_precharged_cycles", m_channel_id));
+      register_stat(s_num_refresh_cycles)
+        .name(fmt::format("CH{}_refresh_cycles", m_channel_id));
 
       // register_stat(s_row_hits).name("row_hits_{}", m_channel_id);
       // register_stat(s_row_misses).name("row_misses_{}", m_channel_id);
@@ -150,7 +151,6 @@ class AiMController final : public IDRAMController, public Implementation {
         // RD/WR excluded.
         req.final_command = m_dram->m_aim_req_translation(req.type_id - 2);
       }
-      // std::cout << "[Ramulator (AiM Controller)] final_cmd: " << req.final_command << std::endl;
 
       // Forward existing write requests to incoming read requests
       if (req.type_id == Request::Type::Read) {
@@ -297,7 +297,7 @@ class AiMController final : public IDRAMController, public Implementation {
               case Request::Type::WR_AFLUT:
               case Request::Type::WR_BK:
                 pending_aim_bank.push(*req_it);
-                s_num_AiM_bank_cycles[req_it->type_id] += (m_clk - req_it->issue);
+                s_num_AiM_bank_cycles[req_it->type_id] += (req_it->depart - req_it->issue);
                 break;
               case Request::Type::WR_GB:
               case Request::Type::WR_MAC:
@@ -305,7 +305,7 @@ class AiMController final : public IDRAMController, public Implementation {
               case Request::Type::RD_MAC:
               case Request::Type::RD_AF:
                 pending_aim_no_bank.push(*req_it);
-                s_num_AiM_no_bank_cycles[req_it->type_id] += (m_clk - req_it->issue);
+                s_num_AiM_no_bank_cycles[req_it->type_id] += (req_it->depart - req_it->issue);
                 break;
               // case Request::Type::MAC_4BK_INTER_BG:
               // case Request::Type::AF_4BK_INTER_BG:
@@ -318,11 +318,11 @@ class AiMController final : public IDRAMController, public Implementation {
             switch (req_it->type_id) {
               case Request::Type::Read:
                 pending_reads.push(*req_it);
-                s_num_RW_cycles[req_it->type_id] += (m_clk - req_it->issue);
+                s_num_RW_cycles[req_it->type_id] += (req_it->depart - req_it->issue);
                 break;
               case Request::Type::Write:
                 pending_writes.push_back(*req_it);
-                s_num_RW_cycles[req_it->type_id] += (m_clk - req_it->issue);
+                s_num_RW_cycles[req_it->type_id] += (req_it->depart - req_it->issue);
                 break;
               default:
                 // Refresh and other system commands - no pending queue needed,
@@ -338,15 +338,25 @@ class AiMController final : public IDRAMController, public Implementation {
             }
           }
         }
-      } else if (m_read_buffer.size() == 0 && m_write_buffer.size() == 0
-                && m_aim_bank_buffer.size() == 0 && m_aim_no_bank_buffer.size() == 0) {
-        s_num_idle_cycles++;
+      } else {
+        // No request was issued this cycle
+        if (m_read_buffer.size() == 0 && m_write_buffer.size() == 0
+            && m_aim_bank_buffer.size() == 0 && m_aim_no_bank_buffer.size() == 0
+            && m_active_buffer.size() == 0 && m_priority_buffer.size() == 0) {
+          // All buffers empty - true idle
+          s_num_idle_cycles++;
+        } else {
+          // Requests exist but couldn't be issued due to timing constraints
+          s_num_stall_cycles++;
+        }
       }
 
-      if (m_dram->m_open_rows[m_channel_id] == 0) {
-        s_num_precharged_cycles++;
-      } else {
-        s_num_active_cycles++;
+      uint16_t open_rows = m_dram->m_open_rows[m_channel_id];
+      if (open_rows == 0) { s_num_precharged_cycles++; }
+      else { s_num_active_cycles++; }
+
+      if (m_priority_buffer.size() > 0) {
+        s_num_refresh_cycles++;
       }
     };
 
@@ -405,8 +415,10 @@ class AiMController final : public IDRAMController, public Implementation {
     std::map<int, int> s_num_commands;
     std::map<int, int> s_num_RW_cycles;
     int s_num_idle_cycles = 0;
+    int s_num_stall_cycles = 0;
     int s_num_active_cycles = 0;
     int s_num_precharged_cycles = 0;
+    int s_num_refresh_cycles = 0;
 
     // AiM
     ReqBuffer m_aim_bank_buffer;
@@ -833,8 +845,10 @@ class AiMController final : public IDRAMController, public Implementation {
         ordered_keys_cycles.push_back(name);
       }
       ordered_keys_cycles.push_back(fmt::format("CH{}_idle_cycles", id));
+      ordered_keys_cycles.push_back(fmt::format("CH{}_stall_cycles", id));
       ordered_keys_cycles.push_back(fmt::format("CH{}_active_cycles", id));
       ordered_keys_cycles.push_back(fmt::format("CH{}_precharged_cycles", id));
+      ordered_keys_cycles.push_back(fmt::format("CH{}_refresh_cycles", id));
 
       for (const auto& key : ordered_keys_cycles) {
         auto it = registry.find(key);

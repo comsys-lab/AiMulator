@@ -44,10 +44,8 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
     };
 
     virtual void finalize_wrapper(const char* stats_dir, const char* timestamp) {
-      auto logger = spdlog::get("Ramulator::IMemorySystem");
-      if (!logger) {
-        logger = Logging::create_logger("IMemorySystem");
-      }
+      auto logger = Logging::get("IMemorySystem");
+      if (!logger) { logger = Logging::create_logger("IMemorySystem"); }
 
       std::string file_path(stats_dir);
       file_path.append("/aimulator_");

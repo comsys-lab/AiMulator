@@ -45,10 +45,8 @@ class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
     };
 
     virtual void finalize_wrapper(const char* stats_dir, const char* timestamp) {
-      auto logger = spdlog::get("Ramulator::IFrontEnd");
-      if (!logger) {
-        logger = Logging::create_logger("IFrontEnd");
-      }
+      auto logger = Logging::get("IFrontEnd");
+      if (!logger) { logger = Logging::create_logger("IFrontEnd"); }
 
       std::string file_path(stats_dir);
       file_path.append("/aimulator_");
