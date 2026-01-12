@@ -20,12 +20,13 @@ Logger_t Logging::get(std::string name) {
   if (logger) {
     return logger;
   } else {
-    throw std::runtime_error(
-      fmt::format(
-        "Logger {} does not exist!",
-        name
-      )
-    );
+    return nullptr;
+    // throw std::runtime_error(
+    //   fmt::format(
+    //     "Logger {} does not exist!",
+    //     name
+    //   )
+    // );
   }
 }
 

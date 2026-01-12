@@ -33,7 +33,7 @@ class AiMSystem final : public IMemorySystem, public Implementation {
         // }
       }
 
-      auto existing_logger = spdlog::get("AiMSystem");
+      auto existing_logger = Logging::get("AiMSystem");
       if (existing_logger) {
         m_logger = existing_logger;
       } else {

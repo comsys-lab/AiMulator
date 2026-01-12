@@ -38,7 +38,7 @@ class AiMController final : public IDRAMController, public Implementation {
       m_dram = memory_system->get_ifce<IDRAM>();
       m_bank_addr_idx = m_dram->m_levels("bank");
       m_priority_buffer.max_size = 512 * 3 + 32;
-      auto existing_logger = spdlog::get("AiMController[" + std::to_string(m_channel_id) + "]");
+      auto existing_logger = Logging::get("AiMController[" + std::to_string(m_channel_id) + "]");
       if (existing_logger) {
         m_logger = existing_logger;
       } else {

@@ -20,7 +20,7 @@ class AiMWrapper : public IFrontEnd, public Implementation {
 
   public:
     void init() override {
-      auto existing_logger = spdlog::get("AiMWrapper");
+      auto existing_logger = Logging::get("AiMWrapper");
       if (existing_logger) {
         m_logger = existing_logger;
       } else {
@@ -35,7 +35,7 @@ class AiMWrapper : public IFrontEnd, public Implementation {
     };
 
     bool receive_external_aim_requests(int req_type_id, Addr_t addr, std::function<void(Request&)> callback) {
-      DEBUG_LOG(AiMWrapper, m_logger
+      DEBUG_LOG(AiMWrapper, m_logger,
                 "[AiMulator: Wrapper] Request type={} received!",
                 req_type_id);
 

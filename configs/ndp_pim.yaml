@@ -14,7 +14,7 @@ MemorySystem:
   DRAM:
     impl: LPDDR5
     org:
-      preset: 16X_LPDDR5_AiM_32Gb
+      preset: 16X_LPDDR5_AiM_32Gb_x16
       # channel: 1
       # rank: 1
       # bankgroup: 4

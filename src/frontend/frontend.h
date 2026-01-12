@@ -45,7 +45,7 @@ class IFrontEnd : public Clocked<IFrontEnd>, public TopLevel<IFrontEnd> {
     };
 
     virtual void finalize_wrapper(const char* stats_dir, const char* timestamp) {
-      auto logger = spdlog::get("Ramulator::IFrontEnd");
+      auto logger = Logging::get("IFrontEnd");
       if (!logger) {
         logger = Logging::create_logger("IFrontEnd");
       }

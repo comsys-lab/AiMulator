@@ -44,7 +44,7 @@ class IMemorySystem : public TopLevel<IMemorySystem> {
     };
 
     virtual void finalize_wrapper(const char* stats_dir, const char* timestamp) {
-      auto logger = spdlog::get("Ramulator::IMemorySystem");
+      auto logger = Logging::get("IMemorySystem");
       if (!logger) {
         logger = Logging::create_logger("IMemorySystem");
       }
